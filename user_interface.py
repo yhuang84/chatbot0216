@@ -305,7 +305,7 @@ with st.sidebar:
     
     llm_model = st.text_input(
         "Model",
-        value="gpt-4o-mini" if llm_provider == "openai" else "claude-3-sonnet-20240229"
+        value="gpt-4.1-mini" if llm_provider == "openai" else "claude-3-sonnet-20240229"
     )
     
     llm_temperature = st.slider(
