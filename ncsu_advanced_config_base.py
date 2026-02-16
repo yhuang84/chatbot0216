@@ -14,12 +14,10 @@ Features:
 - Multiple LLM providers (OpenAI, Anthropic, Mock)
 - Embedded configuration (edit the config dict in main())
 - Comprehensive logging and result saving
-- URL deduplication and smart content truncation
-- Rich hyperlink formatting in answers
 
 Usage:
     1. Edit the 'config' dictionary in the main() function below
-    2. Run: python ncsu_advanced_config_base.py
+    2. Run: python ncsu_advanced_config.py
     
 Configuration:
     All settings are in the main() function's config dictionary.
@@ -212,6 +210,57 @@ class NCSUAdvancedResearcher:
         # Use full content for grading - no truncation
         content_to_grade = content
         
+        prompt = f"""You are an expert content grader. Grade how relevant this content is to answering the user's query.
+
+USER QUERY: {query}
+
+CONTENT TO GRADE:
+{content_to_grade}
+
+GRADING INSTRUCTIONS:
+- Analyze the entire content thoroughly
+- Consider how well the content answers or relates to the query
+- Ignore navigation menus, headers, and boilerplate text
+- Focus on the substantive information that addresses the query
+- Consider information quality, accuracy, and completeness
+
+SCORING SCALE:
+- 1.0 = Perfect match - content directly and comprehensively answers the query
+- 0.8-0.9 = Highly relevant - content strongly relates and provides good information
+- 0.6-0.7 = Moderately relevant - content relates but may be incomplete or tangential
+- 0.4-0.5 = Somewhat relevant - content has some connection but limited usefulness
+- 0.2-0.3 = Minimally relevant - content barely relates to the query
+- 0.0-0.1 = Irrelevant - content does not relate to the query
+
+Return ONLY a decimal number between 0.0 and 1.0 (e.g., 0.85):"""
+        
+        try:
+            response = self.llm_provider.generate_response(prompt)
+            # Extract number from response
+            import re
+            match = re.search(r'(\d+\.?\d*)', response)
+            if match:
+                score = float(match.group(1))
+                return max(0.0, min(1.0, score))  # Clamp between 0 and 1
+            return 0.5  # Default if parsing fails
+        except Exception as e:
+            self.logger.warning(f"Error grading content: {e}")
+            return 0.5
+    
+    def generate_answer(self, content: str, query: str, sources: List[Dict]) -> str:
+        """Generate final answer using LLM"""
+        
+        def extract_main_content(content: str) -> str:
+            """Extract main content - use full content without truncation"""
+            return content
+        
+        sources_text = "\n".join([
+            f"=== SOURCE {i+1}: {source['title']} (Relevance: {source.get('relevance_score', 'N/A')}) ==="
+            f"\nURL: {source['url']}"
+            f"\nContent: {extract_main_content(source['content'])}\n"
+            for i, source in enumerate(sources)  # Use ALL filtered sources with full content - no truncation
+        ])
+        
         prompt = f"""You are an expert research assistant. Based on the NCSU website content provided below, answer the user's question comprehensively and accurately.
 
 USER QUESTION: {query}
@@ -232,225 +281,7 @@ INSTRUCTIONS:
 
 COMPREHENSIVE ANSWER:"""
         
-        
-        try:
-            response = self.llm_provider.generate_response(prompt)
-            # Extract number from response
-            import re
-            match = re.search(r'(\d+\.?\d*)', response)
-            if match:
-                score = float(match.group(1))
-                return max(0.0, min(1.0, score))  # Clamp between 0 and 1
-            return 0.5  # Default if parsing fails
-        except Exception as e:
-            self.logger.warning(f"Error grading content: {e}")
-            return 0.5
-    
-    def generate_answer(self, content: str, query: str, sources: List[Dict]) -> str:
-        """Generate final answer using LLM"""
-        
-        # --- 1. Deduplicate Sources based on URL ---
-        unique_sources = []
-        seen_urls = set()
-        for source in sources:
-            url = source['url']
-            # Normalize URL (remove trailing slash for comparison)
-            norm_url = url.rstrip('/')
-            if norm_url not in seen_urls:
-                seen_urls.add(norm_url)
-                unique_sources.append(source)
-        
-        # Use unique sources for the rest of the function
-        sources = unique_sources
-
-        def extract_main_content(content: str, max_chars: int = 200000) -> str:
-            """
-            Extract main content - intelligently handle long content
-            - If content is within limit: keep it full
-            - If content exceeds limit: truncate smartly (keep beginning + end)
-            """
-            # Handle None or empty content
-            if content is None:
-                return ""
-            
-            if len(content) <= max_chars:
-                # Content within limit, keep full
-                return content
-            
-            # Content too long, smart truncation: keep 70% start + 30% end
-            keep_start = int(max_chars * 0.7)
-            keep_end = int(max_chars * 0.3)
-            
-            truncated = (
-                content[:keep_start] + 
-                f"\n\n... [Content truncated - original: {len(content):,} chars, showing: {max_chars:,} chars] ...\n\n" +
-                content[-keep_end:]
-            )
-            
-            return truncated
-        
-        # --- 2. Create Source Map for LLM context ---
-        sources_text_list = []
-        source_url_map = []
-        
-        for i, source in enumerate(sources):
-            idx = i + 1
-            # Safely get content (handle None case)
-            source_content = source.get('content', '') if source.get('content') is not None else ''
-            original_length = len(source_content)
-            
-            # Apply smart truncation
-            processed_content = extract_main_content(source_content, max_chars=200000)
-            
-            if original_length > 200000:
-                self.logger.info(f"Source {idx} truncated: {original_length:,} → {len(processed_content):,} chars")
-            
-            # Add to content text
-            sources_text_list.append(
-                f"=== SOURCE {idx}: {source['title']} (Relevance: {source.get('relevance_score', 'N/A')}) ===\n"
-                f"URL: {source['url']}\n"
-                f"Content: {processed_content}\n"
-            )
-            # Add to URL map for the prompt
-            source_url_map.append(f"[Source {idx}]: {source['url']}")
-
-        sources_text = "\n".join(sources_text_list)
-        source_map_str = "\n".join(source_url_map)
-        
-        # --- Check total size and warn if too large ---
-        total_chars = len(sources_text)
-        estimated_tokens = total_chars // 4  # Rough estimate: 1 token ≈ 4 chars
-        
-        if estimated_tokens > 800000:  # Leave room for response
-            self.logger.warning(f"⚠️ Large prompt: ~{estimated_tokens:,} tokens (may hit limits)")
-        else:
-            self.logger.info(f"✅ Prompt size: ~{estimated_tokens:,} tokens (~{total_chars:,} chars)")
-        
-        # --- 3. Enhanced Prompt with Specific Instructions ---
-        prompt = f"""You are an expert research assistant specializing in comprehensive, detailed responses. Your task is to provide an EXTENSIVE, THOROUGH answer to the user's question using all available NCSU website content.
-
-USER QUESTION: {query}
-
-AVAILABLE SOURCES (Use these URLs for citations):
-{source_map_str}
-
-NCSU WEBSITE CONTENT:
-{sources_text}
-
-CRITICAL INSTRUCTIONS FOR COMPREHENSIVE RESPONSES:
-
-1. **LENGTH & DEPTH REQUIREMENTS**:
-   - Write a COMPREHENSIVE answer of AT LEAST 1500-2500 words
-   - Cover ALL relevant aspects of the question thoroughly
-   - Include detailed explanations, not just brief summaries
-   - Expand on each point with examples, context, and specifics
-   - If multiple sources discuss the same topic, synthesize all perspectives
-
-2. **STRUCTURE** (Use this organization):
-   - **Introduction** (150-200 words): Overview and context
-   - **Main Content** (1200-2000 words): Multiple detailed sections covering:
-     * All key points from the source material
-     * Step-by-step processes where applicable
-     * Requirements, eligibility, deadlines
-     * Specific procedures and forms
-     * Important policies and guidelines
-     * Contact information and resources
-   - **Practical Information** (200-300 words):
-     * Tips and best practices
-     * Common questions and clarifications
-     * Important notes and warnings
-   - **Summary & Next Steps** (100-150 words): Key takeaways and action items
-
-3. **CONTENT REQUIREMENTS**:
-   - Extract and present ALL relevant details from the sources
-   - Include specific numbers, dates, requirements, and procedures
-   - Explain the "why" behind policies and requirements
-   - Provide context and background information
-   - Address related questions the user might have
-   - Include examples to illustrate complex points
-
-4. **Rich Hyperlinks (CRITICAL)**: 
-   - Create clickable links for ALL forms, portals, pages, and resources
-   - Example: "Complete the [CSC Travel Authorization Request Form](https://forms.ncsu.edu/...)."
-   - Link ALL department names, office names, and specific programs mentioned
-   - If specific URL not in text, use the main Source URL that mentions it
-
-5. **Inline Citations**:
-   - Cite sources immediately after facts: "Fact here [Source N]({{source_url}})."
-   - Use the URL from the "AVAILABLE SOURCES" list above
-   - Cite frequently to show information is well-sourced
-
-6. **Formatting**:
-   - Use clear headings (##) and subheadings (###)
-   - Use bullet points for lists of items
-   - Use numbered lists for sequential steps
-   - Bold important terms, deadlines, and requirements
-   - Use tables where appropriate for comparing options
-
-7. **Deduplicate Information**: 
-   - Synthesize information from multiple sources
-   - Don't repeat the same fact multiple times
-   - Combine related information into cohesive sections
-
-8. **COMPLETENESS CHECK** - Your answer MUST include:
-   ✓ All requirements or eligibility criteria mentioned in sources
-   ✓ All steps in any described process
-   ✓ All deadlines or timeframes mentioned
-   ✓ All contact information and resources
-   ✓ All forms, portals, or tools referenced
-   ✓ All policies, rules, or guidelines that apply
-   ✓ Common questions or important clarifications
-
-EXAMPLE OUTPUT FORMAT:
-
-## Introduction
-
-[150-200 words providing overview and context for the topic]
-
-## Main Topic Section 1
-
-### Subsection 1.1: Specific Aspect
-[Detailed explanation with examples and citations]
-
-**Important Note:** [Highlight critical information] [Source 1](url)
-
-### Subsection 1.2: Another Aspect
-[More detailed content...]
-
-To complete this process, you'll need to:
-1. First step in detail [Source 2](url)
-2. Second step in detail [Source 2](url)
-3. Third step in detail [Source 3](url)
-
-## Main Topic Section 2
-
-[Continue with thorough coverage...]
-
-## Practical Information
-
-### Tips and Best Practices
-- Tip 1 with explanation [Source 4](url)
-- Tip 2 with explanation [Source 4](url)
-
-### Important Deadlines
-| Deadline Type | Date | Notes | Source |
-|---------------|------|-------|--------|
-| Example | Date | Details | [Link](url) |
-
-### Common Questions
-**Q: Question here?**
-A: Detailed answer with citation [Source 5](url)
-
-## Summary and Next Steps
-
-[Concise summary of key takeaways and recommended actions]
-
----
-
-NOW WRITE YOUR COMPREHENSIVE, DETAILED ANSWER (1500-2500+ words):"""
-        
         return self.llm_provider.generate_response(prompt)
-                            
     
     def research(self, query: str) -> Dict[str, Any]:
         """Conduct advanced research with all features"""
@@ -477,65 +308,12 @@ NOW WRITE YOUR COMPREHENSIVE, DETAILED ANSWER (1500-2500+ words):"""
         print(f"\n📋 STEP 1: Searching NCSU website for top-k results...")
         print("-" * 50)
         search_results = self.scraper.search(query, max_results=self.config.get('top_k', 10))
-        
-        # Handle None case (search might fail)
-        if search_results is None:
-            search_results = []
-        
-        initial_count = len(search_results)
-        print(f"📥 Initial search results: {initial_count}")
-
-        # --- SMART DEDUPLICATION: Remove duplicate URLs ---
-        from urllib.parse import urlparse, parse_qs, urlencode
-        
-        unique_results = []
-        seen_urls = set()
-        duplicate_count = 0
-        
-        for result in search_results:
-            # Parse URL
-            parsed = urlparse(str(result.url))
-            
-            # Normalize URL components:
-            # 1. Standardize scheme (http/https)
-            # 2. Lowercase domain
-            # 3. Remove trailing slash from path
-            # 4. Keep query parameters (for dynamic pages)
-            # 5. Remove fragment (anchor #)
-            scheme = 'https'  # Standardize to https
-            netloc = parsed.netloc.lower()
-            path = parsed.path.rstrip('/')
-            
-            # Keep query parameters but remove tracking params
-            query_params = parse_qs(parsed.query)
-            # Remove common tracking parameters
-            tracking_params = {'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'fbclid', 'gclid'}
-            filtered_params = {k: v for k, v in query_params.items() if k not in tracking_params}
-            
-            # Rebuild normalized URL
-            if filtered_params:
-                query_str = urlencode(sorted(filtered_params.items()), doseq=True)
-                norm_url = f"{scheme}://{netloc}{path}?{query_str}"
-            else:
-                norm_url = f"{scheme}://{netloc}{path}"
-            
-            # Check if we've seen this normalized URL
-            if norm_url not in seen_urls:
-                seen_urls.add(norm_url)
-                unique_results.append(result)
-            else:
-                duplicate_count += 1
-
-        search_results = unique_results  # Use deduplicated results
-        # --- END DEDUPLICATION ---
-
         results['search_results'] = [
             {'title': r.title, 'url': str(r.url), 'snippet': r.snippet}
             for r in search_results
         ]
-        print(f"✅ Found {len(search_results)} unique search results")
-        print(f"🔄 Removed {duplicate_count} duplicate URLs")
-
+        print(f"✅ Found {len(search_results)} search results")
+        
         # Print all search result URLs
         print(f"\n🔗 SEARCH RESULT URLs:")
         for i, result in enumerate(search_results, 1):
@@ -545,7 +323,7 @@ NOW WRITE YOUR COMPREHENSIVE, DETAILED ANSWER (1500-2500+ words):"""
                 snippet_preview = result.snippet[:100] + "..." if len(result.snippet) > 100 else result.snippet
                 print(f"      📝 {snippet_preview}")
             print()
-
+        
         if not search_results:
             print("❌ No search results found")
             return results
@@ -799,7 +577,7 @@ def create_sample_config():
         'llm_provider': 'mock',
         'llm_model': 'gpt-3.5-turbo',
         'llm_temperature': 0.7,
-        'llm_max_tokens': 8000,
+        'llm_max_tokens': 1000,
         'top_k': 10,
         'max_pages': 5,
         'relevance_threshold': 0.6,
@@ -818,11 +596,6 @@ def create_sample_config():
 
 def main():
     """Main function with embedded configuration"""
-    
-    # Fix Windows console encoding
-    if sys.platform == 'win32':
-        import io
-        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
     
     # ========================================
     # 🔑 LOAD ENVIRONMENT VARIABLES FROM .env
@@ -843,13 +616,31 @@ def main():
     
     config = {
         # 📋 Query Configuration
+        #'query': 'Grad Student Profile: Raj Madhu - tell me about his research',
+        #'query': 'which faculty isdoing research on explainable AI?',
+        #'query': 'what are pre-requisites for course TT480?',
+        #'query': 'who got nSF career award in 2025?',
+        # 'query': 'as an incoming freshman, what are the requirements for the computer science major?',
+        #'query': 'as an incoming freshman, what are some things you should know to prepare for the year?',
+        #'query': 'as a faculty or student, what are the steps for travel for conference?',
+        # 'query': 'as a faculty or student, what are the steps for travel for conference?',
+        #'query': 'who is doing research on yarn?',
+        #'query': 'what is the research area for supply chain and ai (sc&ai) lab?',
+        # 'query': 'who got funding recently on ai from usda?',
+        # 'query': 'Can you tell me the Release time details for new faculty at  WCOT Wilson College of Textiles at NCSU',
+        # 'query': 'What kinds of scholarships or financial aid are available for students in the College of Textiles?',
+        # 'query': 'How can I get reimbursement for my travel expenses as a student?',
         'query': 'What are the requirements for the Computer Science major at NC State University?',
+        
+
+
+
         
         # 🤖 LLM Configuration
         'llm_provider': 'openai',  # Options: 'mock', 'openai', 'anthropic'
-        'llm_model': 'gpt-5-mini',   # Model name (gpt-4o, claude-3-sonnet-20240229, etc.)
+        'llm_model': 'gpt-4.1-mini',   # Model name (gpt-4o, claude-3-sonnet-20240229, etc.)
         'llm_temperature': 0.3,  # Temperature (0.0-1.0) - balanced for analysis and generation
-        'llm_max_tokens': 8000,  # Maximum tokens for comprehensive responses (increased from 4000)
+        'llm_max_tokens': 4000,  # Maximum tokens for comprehensive responses
         
         # 🔍 Search Configuration
         'top_k': 20,             # Top-K search results (1-50)
@@ -866,7 +657,7 @@ def main():
         # 🚀 Extraction Configuration
         'selenium_enabled': True,      # Enable Selenium for JavaScript pages (needed for NCSU search)
         'enhanced_extraction': True,   # Enable enhanced extraction features
-        'user_agent': 'NCSU Advanced Research Assistant Bot 1.0',  # Custom User-Agent
+        'user_agent': 'NCSU Research Assistant Bot 1.0',  # Custom User-Agent
         'delay': 1.0,                  # Delay between requests in seconds
         'max_retries': 3,              # Maximum retry attempts
         
@@ -965,6 +756,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
