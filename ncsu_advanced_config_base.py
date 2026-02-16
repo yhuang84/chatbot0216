@@ -712,13 +712,13 @@ def main():
         
         # 🤖 LLM Configuration for Answer Generation
         'llm_provider': 'openai',  # Options: 'mock', 'openai', 'anthropic'
-        'llm_model': 'gpt-4o',     # High-quality model for final answer
+        'llm_model': 'gpt-4.1-min',     # High-quality model for final answer
         'llm_temperature': 0.3,
         'llm_max_tokens': 4000,
         
         # 🎯 LLM Configuration for Content Grading (OPTIMIZED)
         'grading_provider': 'openai',  # Can be different from llm_provider
-        'grading_model': 'gpt-4o-mini',  # Fast, cheap model for grading
+        'grading_model': 'gpt-4.1-min',  # Fast, cheap model for grading
         'grading_temperature': 0.3,
         'grading_max_tokens': 10,  # Only need a number
         'max_grading_content_length': 2000,  # Truncate content for faster grading
@@ -847,3 +847,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
