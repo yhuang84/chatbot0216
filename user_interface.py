@@ -1,8 +1,15 @@
+
 #!/usr/bin/env python3
 """
-NCSU Research Assistant - Web Interface
-========================================
+NCSU Research Assistant - Web Interface (FIXED VERSION)
+=======================================================
 A beautiful web interface for the NCSU Research Assistant with NC State branding.
+
+FIXES APPLIED:
+1. Swapped logo positions (Wolfpack left, University right)
+2. Improved API key visualization with better status messages
+3. Enhanced error handling for API key testing
+4. Better visual feedback with icons
 """
 
 import streamlit as st
@@ -36,12 +43,12 @@ except ImportError as e:
     **Error details:** {str(e)}
     
     **Possible causes:**
-    1. Missing `src/` folder with required modules
+    1. Missing \`src/\` folder with required modules
     2. Missing dependencies in requirements.txt
     3. File structure issue
     
     **Required file structure:**
-    ```
+    \`\`\`
     /
     ├── user_interface.py (this file)
     ├── ncsu_advanced_config_base.py
@@ -55,7 +62,7 @@ except ImportError as e:
         └── utils/
             ├── __init__.py
             └── logger.py
-    ```
+    \`\`\`
     
     **Please ensure all files are uploaded to your repository!**
     """)
@@ -141,10 +148,37 @@ st.markdown("""
         background-color: white;
     }
     
-    /* Success/Info boxes - make them less prominent */
-    .stSuccess, .stInfo {
-        background-color: rgba(204, 0, 0, 0.05);
-        border-left: 4px solid #CC0000;
+    /* Success/Info boxes - IMPROVED */
+    .stSuccess {
+        background-color: rgba(0, 200, 0, 0.15) !important;
+        border-left: 5px solid #00C800 !important;
+        color: white !important;
+        padding: 1rem !important;
+        border-radius: 5px !important;
+    }
+    
+    .stInfo {
+        background-color: rgba(0, 150, 255, 0.15) !important;
+        border-left: 5px solid #0096FF !important;
+        color: white !important;
+        padding: 1rem !important;
+        border-radius: 5px !important;
+    }
+    
+    .stWarning {
+        background-color: rgba(255, 165, 0, 0.15) !important;
+        border-left: 5px solid #FFA500 !important;
+        color: white !important;
+        padding: 1rem !important;
+        border-radius: 5px !important;
+    }
+    
+    .stError {
+        background-color: rgba(255, 0, 0, 0.15) !important;
+        border-left: 5px solid #FF0000 !important;
+        color: white !important;
+        padding: 1rem !important;
+        border-radius: 5px !important;
     }
     
     /* Answer container - prominent display */
@@ -201,14 +235,14 @@ if 'running' not in st.session_state:
 if 'query' not in st.session_state:
     st.session_state.query = ""
 
-# Header with NC State logos on both sides
+# Header with NC State logos - SWAPPED POSITIONS
 col1, col2, col3 = st.columns([1, 2, 1])
 
 with col1:
-    # NC State University Logo (left side)
-    logo_path = os.path.join(CURRENT_DIR, "NC-State-University-Logo.png")
-    if os.path.exists(logo_path):
-        st.image(logo_path, width=150)
+    # Wolfpack Logo (LEFT SIDE - moved from right)
+    wolfpack_logo_path = os.path.join(CURRENT_DIR, "NC_State_Wolfpack_logo.svg.png")
+    if os.path.exists(wolfpack_logo_path):
+        st.image(wolfpack_logo_path, width=150)
     else:
         st.markdown("<h1 style='text-align: center;'>🐺</h1>", unsafe_allow_html=True)
 
@@ -217,10 +251,10 @@ with col2:
     st.markdown("<p style='text-align: center; color: #666; font-size: 1.1em;'>AI-Powered Research Tool for NC State University</p>", unsafe_allow_html=True)
 
 with col3:
-    # Wolfpack Logo (right side)
-    wolfpack_logo_path = os.path.join(CURRENT_DIR, "NC_State_Wolfpack_logo.svg.png")
-    if os.path.exists(wolfpack_logo_path):
-        st.image(wolfpack_logo_path, width=150)
+    # NC State University Logo (RIGHT SIDE - moved from left)
+    logo_path = os.path.join(CURRENT_DIR, "NC-State-University-Logo.png")
+    if os.path.exists(logo_path):
+        st.image(logo_path, width=150)
     else:
         st.markdown("<h1 style='text-align: center;'>🏛️</h1>", unsafe_allow_html=True)
 
@@ -229,34 +263,42 @@ st.markdown("---")
 # Sidebar - Configuration
 with st.sidebar:
     st.markdown("### ⚙️ Configuration")
+    st.markdown("---")
     
-    # API Key section
+    # API Key section - IMPROVED VISUALIZATION
     st.markdown("### 🔑 API Key")
     user_api_key = st.text_input(
-        "Enter your OpenAI API Key",
+        "OpenAI API Key",
         type="password",
-        help="Get your API key from https://platform.openai.com/api-keys"
+        help="Get your API key from https://platform.openai.com/api-keys",
+        placeholder="sk-proj-...",
+        label_visibility="collapsed"
     )
     
     if user_api_key:
         os.environ['OPENAI_API_KEY'] = user_api_key
-        st.success("✅ API Key Set")
+        st.success("✅ API Key Set Successfully", icon="✅")
         
         # Test API Key button
-        if st.button("🧪 Test API Key"):
-            try:
-                import openai
-                client = openai.OpenAI(api_key=user_api_key)
-                response = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[{"role": "user", "content": "Hello"}],
-                    max_tokens=10
-                )
-                st.success("✅ API Key is valid!")
-            except Exception as e:
-                st.error(f"❌ API Key test failed: {str(e)}")
+        if st.button("🧪 Test API Key", use_container_width=True, type="secondary"):
+            with st.spinner("Testing connection to OpenAI..."):
+                try:
+                    import openai
+                    client = openai.OpenAI(api_key=user_api_key)
+                    response = client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=[{"role": "user", "content": "test"}],
+                        max_tokens=5
+                    )
+                    st.success("✅ API Key is Valid!\n\nConnection to OpenAI successful.", icon="✅")
+                except openai.AuthenticationError:
+                    st.error("❌ Invalid API Key\n\nPlease check your API key and try again.", icon="❌")
+                except openai.RateLimitError:
+                    st.warning("⚠️ Rate Limit Exceeded\n\nYour API key is valid but you've hit the rate limit.", icon="⚠️")
+                except Exception as e:
+                    st.error(f"❌ API Test Failed\n\n{str(e)[:150]}...", icon="❌")
     else:
-        st.warning("⚠️ Please enter your API key to use the chatbot")
+        st.warning("⚠️ Please enter your OpenAI API key above to continue", icon="⚠️")
     
     st.markdown("---")
     
@@ -395,7 +437,7 @@ if search_button and query:
     
     # Check if API key is set
     if not os.getenv('OPENAI_API_KEY'):
-        st.error("❌ Please enter your OpenAI API key in the sidebar before starting research!")
+        st.error("❌ Please enter your OpenAI API key in the sidebar before starting research!", icon="❌")
         st.stop()
     
     st.session_state.running = True
@@ -432,48 +474,48 @@ if search_button and query:
             # Step 1: Initialize (0-20%)
             progress_bar.progress(5)
             percentage_text.markdown("**Progress: 5%**")
-            status_text.info("🔧 Initializing researcher...")
+            status_text.info("🔧 Initializing researcher...", icon="🔧")
             time.sleep(0.3)
             
             researcher = NCSUAdvancedResearcher(config)
             progress_bar.progress(20)
             percentage_text.markdown("**Progress: 20%**")
-            status_text.success("✅ Researcher initialized successfully")
+            status_text.success("✅ Researcher initialized successfully", icon="✅")
             time.sleep(0.5)
             
             # Step 2: Searching (20-40%)
             progress_bar.progress(25)
             percentage_text.markdown("**Progress: 25%**")
-            status_text.info("🔍 Searching NCSU website...")
+            status_text.info("🔍 Searching NCSU website...", icon="🔍")
             time.sleep(0.3)
             
             progress_bar.progress(40)
             percentage_text.markdown("**Progress: 40%**")
-            status_text.success("✅ Search completed, found results")
+            status_text.success("✅ Search completed, found results", icon="✅")
             time.sleep(0.5)
             
             # Step 3: Extracting content (40-70%)
             progress_bar.progress(50)
             percentage_text.markdown("**Progress: 50%**")
-            status_text.info("📄 Extracting content from pages...")
+            status_text.info("📄 Extracting content from pages...", icon="📄")
             time.sleep(0.3)
             
             progress_bar.progress(60)
             percentage_text.markdown("**Progress: 60%**")
-            status_text.info("🤖 Analyzing content with AI...")
+            status_text.info("🤖 Analyzing content with AI...", icon="🤖")
             
             # Run research (this is the main work)
             results = researcher.research(query)
             
             progress_bar.progress(80)
             percentage_text.markdown("**Progress: 80%**")
-            status_text.success("✅ Content analysis complete")
+            status_text.success("✅ Content analysis complete", icon="✅")
             time.sleep(0.5)
             
             # Step 4: Generating answer (80-95%)
             progress_bar.progress(90)
             percentage_text.markdown("**Progress: 90%**")
-            status_text.info("💾 Saving results...")
+            status_text.info("💾 Saving results...", icon="💾")
             time.sleep(0.3)
             
             # Save results
@@ -482,7 +524,7 @@ if search_button and query:
             # Complete (100%)
             progress_bar.progress(100)
             percentage_text.markdown("**Progress: 100%**")
-            status_text.success("✅ Research complete!")
+            status_text.success("✅ Research complete!", icon="✅")
             time.sleep(0.8)
             
             # Clear progress indicators
@@ -496,7 +538,7 @@ if search_button and query:
         st.session_state.running = False
         
     except Exception as e:
-        st.error(f"❌ Error during research: {str(e)}")
+        st.error(f"❌ Error during research: {str(e)}", icon="❌")
         st.session_state.running = False
         
         # Show helpful error message
@@ -512,13 +554,13 @@ if search_button and query:
         - Some sites may block automated access
         
         **3. Selenium/ChromeDriver Issues:**
-        - Ensure `packages.txt` includes chromium and chromium-driver
+        - Ensure \`packages.txt\` includes chromium and chromium-driver
         - Try disabling Selenium in Advanced Settings
         
         **4. Content Issues:**
         - Try a different query
         - Reduce Top-K Results or Max Pages in settings
-        """)
+        """, icon="💡")
         
         # Show error details in expander (collapsed by default)
         with st.expander("🔍 Show Technical Details"):
@@ -606,7 +648,7 @@ if st.session_state.results:
                 **Word Count:** {source['word_count']:,} words
                 """)
     else:
-        st.warning("No sources found in results")
+        st.warning("No sources found in results", icon="⚠️")
     
     # Detailed data
     with st.expander("📊 View Detailed Research Data"):
