@@ -212,29 +212,26 @@ class NCSUAdvancedResearcher:
         # Use full content for grading - no truncation
         content_to_grade = content
         
-        prompt = f"""You are an expert content grader. Grade how relevant this content is to answering the user's query.
+        prompt = f"""You are an expert research assistant. Based on the NCSU website content provided below, answer the user's question comprehensively and accurately.
 
-USER QUERY: {query}
+USER QUESTION: {query}
 
-CONTENT TO GRADE:
-{content_to_grade}
+NCSU WEBSITE CONTENT:
+{sources_text}
 
-GRADING INSTRUCTIONS:
-- Analyze the entire content thoroughly
-- Consider how well the content answers or relates to the query
-- Ignore navigation menus, headers, and boilerplate text
-- Focus on the substantive information that addresses the query
-- Consider information quality, accuracy, and completeness
+INSTRUCTIONS:
+- Analyze all the provided content thoroughly
+- Extract and synthesize relevant information to answer the question
+- Provide a comprehensive, well-structured response
+- Use specific details and facts from the content
+- If the content contains the answer, provide it in full detail
+- If the content is incomplete, mention what information is available
+- Be accurate and factual - only use information from the provided content
+- Organize your response logically with clear paragraphs
+- Include specific details, names, dates, and facts when available
 
-SCORING SCALE:
-- 1.0 = Perfect match - content directly and comprehensively answers the query
-- 0.8-0.9 = Highly relevant - content strongly relates and provides good information
-- 0.6-0.7 = Moderately relevant - content relates but may be incomplete or tangential
-- 0.4-0.5 = Somewhat relevant - content has some connection but limited usefulness
-- 0.2-0.3 = Minimally relevant - content barely relates to the query
-- 0.0-0.1 = Irrelevant - content does not relate to the query
-
-Return ONLY a decimal number between 0.0 and 1.0 (e.g., 0.85):"""
+COMPREHENSIVE ANSWER:"""
+        
         
         try:
             response = self.llm_provider.generate_response(prompt)
@@ -968,5 +965,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
