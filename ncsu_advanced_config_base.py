@@ -850,7 +850,7 @@ def main():
         
         # 🤖 LLM Configuration
         'llm_provider': 'openai',  # Options: 'mock', 'openai', 'anthropic'
-        'llm_model': 'gpt-4o-mini',   # Model name (gpt-4o, claude-3-sonnet-20240229, etc.)
+        'llm_model': 'gpt-5-mini',   # Model name (gpt-4o, claude-3-sonnet-20240229, etc.)
         'llm_temperature': 0.3,  # Temperature (0.0-1.0) - balanced for analysis and generation
         'llm_max_tokens': 8000,  # Maximum tokens for comprehensive responses (increased from 4000)
         
@@ -968,4 +968,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
