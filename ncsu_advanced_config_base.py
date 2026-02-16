@@ -330,37 +330,127 @@ Return ONLY a decimal number between 0.0 and 1.0 (e.g., 0.85):"""
             self.logger.info(f"✅ Prompt size: ~{estimated_tokens:,} tokens (~{total_chars:,} chars)")
         
         # --- 3. Enhanced Prompt with Specific Instructions ---
-        prompt = f"""You are an expert research assistant. Based on the NCSU website content provided below, answer the user's question comprehensively.
+        prompt = f"""You are an expert research assistant specializing in comprehensive, detailed responses. Your task is to provide an EXTENSIVE, THOROUGH answer to the user's question using all available NCSU website content.
 
-    USER QUESTION: {query}
+USER QUESTION: {query}
 
-    AVAILABLE SOURCES (Use these URLs for citations):
-    {source_map_str}
+AVAILABLE SOURCES (Use these URLs for citations):
+{source_map_str}
 
-    NCSU WEBSITE CONTENT:
-    {sources_text}
+NCSU WEBSITE CONTENT:
+{sources_text}
 
-INSTRUCTIONS:
-1. **Deduplicate Information**: Synthesize information. Do not repeat the same fact multiple times just because it appears in multiple sources.
-2. **Rich Hyperlinks (CRITICAL)**: 
-   - You MUST create clickable links for specific forms, portals, or named pages mentioned in the text.
+CRITICAL INSTRUCTIONS FOR COMPREHENSIVE RESPONSES:
+
+1. **LENGTH & DEPTH REQUIREMENTS**:
+   - Write a COMPREHENSIVE answer of AT LEAST 1500-2500 words
+   - Cover ALL relevant aspects of the question thoroughly
+   - Include detailed explanations, not just brief summaries
+   - Expand on each point with examples, context, and specifics
+   - If multiple sources discuss the same topic, synthesize all perspectives
+
+2. **STRUCTURE** (Use this organization):
+   - **Introduction** (150-200 words): Overview and context
+   - **Main Content** (1200-2000 words): Multiple detailed sections covering:
+     * All key points from the source material
+     * Step-by-step processes where applicable
+     * Requirements, eligibility, deadlines
+     * Specific procedures and forms
+     * Important policies and guidelines
+     * Contact information and resources
+   - **Practical Information** (200-300 words):
+     * Tips and best practices
+     * Common questions and clarifications
+     * Important notes and warnings
+   - **Summary & Next Steps** (100-150 words): Key takeaways and action items
+
+3. **CONTENT REQUIREMENTS**:
+   - Extract and present ALL relevant details from the sources
+   - Include specific numbers, dates, requirements, and procedures
+   - Explain the "why" behind policies and requirements
+   - Provide context and background information
+   - Address related questions the user might have
+   - Include examples to illustrate complex points
+
+4. **Rich Hyperlinks (CRITICAL)**: 
+   - Create clickable links for ALL forms, portals, pages, and resources
    - Example: "Complete the [CSC Travel Authorization Request Form](https://forms.ncsu.edu/...)."
-   - If the specific URL for a form is not explicitly in the text, use the main Source URL that mentions it.
-3. **Inline Citations**:
-   - Cite the source immediately after the fact using standard Markdown: "Fact here [Source N]({{source_url}})."
-   - Use the URL from the "AVAILABLE SOURCES" list above.
-4. **Format**:
-   - Use clear headings and bullet points.
-   - **Do not** create a separate "Sources" list at the end; the inline links are sufficient.
+   - Link ALL department names, office names, and specific programs mentioned
+   - If specific URL not in text, use the main Source URL that mentions it
 
-Example Output Format:
-**1. Eligibility**
-You must be an active student to apply. Check your status on the [MyPack Portal](https://mypack.ncsu.edu) before continuing [Source 1](https://ncsu.edu/policy).
+5. **Inline Citations**:
+   - Cite sources immediately after facts: "Fact here [Source N]({{source_url}})."
+   - Use the URL from the "AVAILABLE SOURCES" list above
+   - Cite frequently to show information is well-sourced
 
-**2. Submission**
-Submit the [Travel Request Form](https://forms.ncsu.edu/travel) at least 2 weeks prior [Source 2](https://ncsu.edu/travel).
+6. **Formatting**:
+   - Use clear headings (##) and subheadings (###)
+   - Use bullet points for lists of items
+   - Use numbered lists for sequential steps
+   - Bold important terms, deadlines, and requirements
+   - Use tables where appropriate for comparing options
 
-COMPREHENSIVE ANSWER WITH HYPERLINKS:"""
+7. **Deduplicate Information**: 
+   - Synthesize information from multiple sources
+   - Don't repeat the same fact multiple times
+   - Combine related information into cohesive sections
+
+8. **COMPLETENESS CHECK** - Your answer MUST include:
+   ✓ All requirements or eligibility criteria mentioned in sources
+   ✓ All steps in any described process
+   ✓ All deadlines or timeframes mentioned
+   ✓ All contact information and resources
+   ✓ All forms, portals, or tools referenced
+   ✓ All policies, rules, or guidelines that apply
+   ✓ Common questions or important clarifications
+
+EXAMPLE OUTPUT FORMAT:
+
+## Introduction
+
+[150-200 words providing overview and context for the topic]
+
+## Main Topic Section 1
+
+### Subsection 1.1: Specific Aspect
+[Detailed explanation with examples and citations]
+
+**Important Note:** [Highlight critical information] [Source 1](url)
+
+### Subsection 1.2: Another Aspect
+[More detailed content...]
+
+To complete this process, you'll need to:
+1. First step in detail [Source 2](url)
+2. Second step in detail [Source 2](url)
+3. Third step in detail [Source 3](url)
+
+## Main Topic Section 2
+
+[Continue with thorough coverage...]
+
+## Practical Information
+
+### Tips and Best Practices
+- Tip 1 with explanation [Source 4](url)
+- Tip 2 with explanation [Source 4](url)
+
+### Important Deadlines
+| Deadline Type | Date | Notes | Source |
+|---------------|------|-------|--------|
+| Example | Date | Details | [Link](url) |
+
+### Common Questions
+**Q: Question here?**
+A: Detailed answer with citation [Source 5](url)
+
+## Summary and Next Steps
+
+[Concise summary of key takeaways and recommended actions]
+
+---
+
+NOW WRITE YOUR COMPREHENSIVE, DETAILED ANSWER (1500-2500+ words):"""
         
         return self.llm_provider.generate_response(prompt)
                             
@@ -878,3 +968,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
