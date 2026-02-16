@@ -350,14 +350,25 @@ Return ONLY a number (e.g., 0.85):"""
             for i, s in enumerate(sources_to_use)
         ])
         
-        prompt = f"""Based on NCSU website content, answer the question comprehensively.
+        prompt = f"""You are an expert research assistant. Based on the NCSU website content provided below, answer the user's question comprehensively and accurately.
 
-QUESTION: {query}
+USER QUESTION: {query}
 
-CONTENT:
+NCSU WEBSITE CONTENT:
 {sources_text}
 
-Provide detailed, accurate answer using only the provided content. Include specific facts, dates, names when available."""
+INSTRUCTIONS:
+- Analyze all the provided content thoroughly
+- Extract and synthesize relevant information to answer the question
+- Provide a comprehensive, well-structured response
+- Use specific details and facts from the content
+- If the content contains the answer, provide it in full detail
+- If the content is incomplete, mention what information is available
+- Be accurate and factual - only use information from the provided content
+- Organize your response logically with clear paragraphs
+- Include specific details, names, dates, and facts when available
+
+COMPREHENSIVE ANSWER:"""
         
         # Log token usage
         estimated_tokens = self._estimate_tokens(prompt)
@@ -639,3 +650,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
