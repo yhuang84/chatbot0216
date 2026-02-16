@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 from datetime import datetime
 import json
+import time
 
 # Get current directory
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -28,7 +29,6 @@ except (KeyError, FileNotFoundError, AttributeError):
 # Import the researcher with better error handling
 try:
     from ncsu_advanced_config_base import NCSUAdvancedResearcher
-    st.success("✅ Successfully imported NCSUAdvancedResearcher")
 except ImportError as e:
     st.error(f"""
     ❌ **Import Error:** Cannot import NCSUAdvancedResearcher
@@ -63,7 +63,7 @@ except ImportError as e:
 
 # Page configuration
 st.set_page_config(
-    page_title="NCSU Search Assistant",
+    page_title="NCSU Research Assistant",
     page_icon="🐺",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -88,6 +88,11 @@ st.markdown("""
     h1, h2, h3 {
         color: #CC0000 !important;
         font-weight: 700 !important;
+    }
+    
+    /* Logo styling */
+    .stImage {
+        border-radius: 10px;
     }
     
     /* Sidebar */
@@ -136,20 +141,74 @@ st.markdown("""
         background-color: white;
     }
     
-    /* Success/Info boxes */
-    .stSuccess {
-        background-color: rgba(204, 0, 0, 0.1);
+    /* Success/Info boxes - make them less prominent */
+    .stSuccess, .stInfo {
+        background-color: rgba(204, 0, 0, 0.05);
         border-left: 4px solid #CC0000;
     }
     
-    /* Result container */
-    .result-box {
+    /* Answer container - prominent display */
+    div[data-testid="stMarkdownContainer"] > div:has(h2:first-child) {
         background: white;
-        padding: 25px;
+        padding: 30px;
         border-radius: 12px;
-        border-left: 5px solid #CC0000;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        border: 3px solid #CC0000;
+        box-shadow: 0 4px 20px rgba(204, 0, 0, 0.15);
         margin: 20px 0;
+        font-size: 1.05em;
+        line-height: 1.7;
+    }
+    
+    /* Answer section specific styling */
+    .answer-section {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        border: 3px solid #CC0000;
+        box-shadow: 0 4px 20px rgba(204, 0, 0, 0.15);
+        margin: 20px 0;
+        font-size: 1.05em;
+        line-height: 1.7;
+    }
+    
+    .answer-section h1, .answer-section h2, .answer-section h3 {
+        color: #CC0000 !important;
+        margin-top: 1.5em;
+        margin-bottom: 0.5em;
+    }
+    
+    .answer-section a {
+        color: #CC0000;
+        text-decoration: none;
+        font-weight: 600;
+        border-bottom: 2px solid #CC0000;
+    }
+    
+    .answer-section a:hover {
+        background-color: rgba(204, 0, 0, 0.1);
+    }
+    
+    .answer-section table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 1em 0;
+    }
+    
+    .answer-section table th {
+        background-color: #CC0000;
+        color: white;
+        padding: 10px;
+        text-align: left;
+        border: 1px solid #CC0000;
+    }
+    
+    .answer-section table td {
+        padding: 8px;
+        border: 1px solid #ddd;
+    }
+    
+    .answer-section table tr:nth-child(even) {
+        background-color: #f9f9f9;
     }
     
     /* Metrics */
@@ -162,6 +221,10 @@ st.markdown("""
     .stProgress > div > div > div {
         background-color: #CC0000;
     }
+    
+    /* Hide default Streamlit elements */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -170,19 +233,31 @@ if 'results' not in st.session_state:
     st.session_state.results = None
 if 'running' not in st.session_state:
     st.session_state.running = False
+if 'query' not in st.session_state:
+    st.session_state.query = ""
 
-# Header with logos
+# Header with NC State logos on both sides
 col1, col2, col3 = st.columns([1, 2, 1])
 
 with col1:
-    st.write("🐺")
+    # NC State University Logo (left side)
+    logo_path = os.path.join(CURRENT_DIR, "NC-State-University-Logo.png")
+    if os.path.exists(logo_path):
+        st.image(logo_path, width=150)
+    else:
+        st.markdown("<h1 style='text-align: center;'>🐺</h1>", unsafe_allow_html=True)
 
 with col2:
-    st.markdown("<h1 style='text-align: center;'>🎯 NCSU Research Assistant</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #666;'>AI-Powered Research Tool for NC State University</p>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; margin-top: 30px;'>NCSU Research Assistant</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #666; font-size: 1.1em;'>AI-Powered Research Tool for NC State University</p>", unsafe_allow_html=True)
 
 with col3:
-    st.write("🏛️")
+    # Wolfpack Logo (right side)
+    wolfpack_logo_path = os.path.join(CURRENT_DIR, "NC_State_Wolfpack_logo.svg.png")
+    if os.path.exists(wolfpack_logo_path):
+        st.image(wolfpack_logo_path, width=150)
+    else:
+        st.markdown("<h1 style='text-align: center;'>🏛️</h1>", unsafe_allow_html=True)
 
 st.markdown("---")
 
@@ -318,8 +393,10 @@ st.markdown("### 📝 Enter Your Research Query")
 
 query = st.text_area(
     "What would you like to research about NC State?",
+    value=st.session_state.query,
     height=100,
-    placeholder="Example: How can I get reimbursement for my travel expenses as a student?"
+    placeholder="Example: How can I get reimbursement for my travel expenses as a student?",
+    key="query_input"
 )
 
 # Example queries
@@ -327,18 +404,18 @@ st.markdown("**💡 Example Queries:**")
 examples_col1, examples_col2, examples_col3 = st.columns(3)
 
 with examples_col1:
-    if st.button("🎓 Graduate Programs"):
-        query = "What are the computer science graduate programs at NCSU?"
+    if st.button("🎓 Graduate Programs", use_container_width=True):
+        st.session_state.query = "What are the computer science graduate programs at NCSU?"
         st.rerun()
 
 with examples_col2:
-    if st.button("💰 Financial Aid"):
-        query = "What kinds of scholarships are available for students?"
+    if st.button("💰 Financial Aid", use_container_width=True):
+        st.session_state.query = "What kinds of scholarships are available for students?"
         st.rerun()
 
 with examples_col3:
-    if st.button("✈️ Travel Reimbursement"):
-        query = "How can I get reimbursement for my travel expenses?"
+    if st.button("✈️ Travel Reimbursement", use_container_width=True):
+        st.session_state.query = "How can I get reimbursement for my travel expenses?"
         st.rerun()
 
 st.markdown("---")
@@ -377,117 +454,134 @@ if search_button and query:
         'timeout': timeout
     }
     
-    # Display debug information
-    st.info("### 🔍 Debug Information")
-    debug_info = {
-        'Query': query,
-        'LLM Provider': llm_provider,
-        'LLM Model': llm_model,
-        'Top-K Results': top_k,
-        'Max Pages': max_pages,
-        'Selenium Enabled': selenium_enabled,
-        'API Key Present': bool(os.getenv('OPENAI_API_KEY'))
-    }
-    st.json(debug_info)
-    
-    # Progress tracking
-    progress_bar = st.progress(0)
-    status_text = st.empty()
+    # Progress tracking with percentage and status messages
+    progress_container = st.container()
     
     try:
-        # Step 1: Show configuration
-        st.info(f"✅ Starting research for query: '{query}'")
-        st.info(f"✅ Configuration created successfully")
-        
-        # Step 2: Initialize researcher
-        status_text.markdown("🔧 **Initializing researcher...**")
-        progress_bar.progress(10)
-        
-        st.info("✅ Initializing NCSUAdvancedResearcher...")
-        researcher = NCSUAdvancedResearcher(config)
-        st.success("✅ Researcher initialized successfully!")
-        
-        # Step 3: Conduct research
-        status_text.markdown("🔍 **Searching NCSU website...**")
-        progress_bar.progress(30)
-        
-        st.info("✅ Starting NCSU website search...")
-        
-        with st.spinner("Conducting research... This may take a few minutes."):
+        with progress_container:
+            # Create progress bar and status
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            percentage_text = st.empty()
+            
+            # Step 1: Initialize (0-20%)
+            progress_bar.progress(5)
+            percentage_text.markdown("**Progress: 5%**")
+            status_text.info("🔧 Initializing researcher...")
+            time.sleep(0.3)
+            
+            researcher = NCSUAdvancedResearcher(config)
+            progress_bar.progress(20)
+            percentage_text.markdown("**Progress: 20%**")
+            status_text.success("✅ Researcher initialized successfully")
+            time.sleep(0.5)
+            
+            # Step 2: Searching (20-40%)
+            progress_bar.progress(25)
+            percentage_text.markdown("**Progress: 25%**")
+            status_text.info("🔍 Searching NCSU website...")
+            time.sleep(0.3)
+            
+            progress_bar.progress(40)
+            percentage_text.markdown("**Progress: 40%**")
+            status_text.success("✅ Search completed, found results")
+            time.sleep(0.5)
+            
+            # Step 3: Extracting content (40-70%)
+            progress_bar.progress(50)
+            percentage_text.markdown("**Progress: 50%**")
+            status_text.info("📄 Extracting content from pages...")
+            time.sleep(0.3)
+            
+            progress_bar.progress(60)
+            percentage_text.markdown("**Progress: 60%**")
+            status_text.info("🤖 Analyzing content with AI...")
+            
+            # Run research (this is the main work)
             results = researcher.research(query)
-        
-        st.success("✅ Search completed successfully!")
-        
-        # Step 4: Complete
-        status_text.markdown("✅ **Research complete!**")
-        progress_bar.progress(100)
-        
-        # Save results
-        st.info("✅ Saving results...")
-        saved_files = researcher.save_results(results)
-        st.success("✅ Results saved successfully!")
+            
+            progress_bar.progress(80)
+            percentage_text.markdown("**Progress: 80%**")
+            status_text.success("✅ Content analysis complete")
+            time.sleep(0.5)
+            
+            # Step 4: Generating answer (80-95%)
+            progress_bar.progress(90)
+            percentage_text.markdown("**Progress: 90%**")
+            status_text.info("💾 Saving results...")
+            time.sleep(0.3)
+            
+            # Save results
+            saved_files = researcher.save_results(results)
+            
+            # Complete (100%)
+            progress_bar.progress(100)
+            percentage_text.markdown("**Progress: 100%**")
+            status_text.success("✅ Research complete!")
+            time.sleep(0.8)
+            
+            # Clear progress indicators
+            progress_bar.empty()
+            status_text.empty()
+            percentage_text.empty()
         
         # Store in session state
         st.session_state.results = results
         st.session_state.saved_files = saved_files
         st.session_state.running = False
         
-        st.success("🎉 Research completed successfully!")
-        
     except Exception as e:
         st.error(f"❌ Error during research: {str(e)}")
         st.session_state.running = False
         
-        # Display full error traceback (not collapsed)
-        import traceback
-        st.error("### 📋 Full Error Traceback:")
-        error_trace = traceback.format_exc()
-        st.code(error_trace, language="python")
-        
-        # Display configuration for debugging
-        st.warning("### ⚙️ Configuration at Time of Error:")
-        st.json(config)
-        
-        # Display partial results if any
-        st.warning("### 🔍 Research Progress Check:")
-        if st.session_state.results:
-            st.write("Partial results generated:")
-            st.json(st.session_state.results)
-        else:
-            st.write("❌ No results were generated before the error occurred")
-        
-        # Common error suggestions
-        st.info("""
+        # Show helpful error message
+        st.warning("""
         ### 💡 Common Issues and Solutions:
         
-        **1. Selenium/ChromeDriver Issues:**
-        - Add `packages.txt` file with:
-          ```
-          chromium
-          chromium-driver
-          ```
+        **1. API Key Issues:**
+        - Verify your API key is valid and has credits
+        - Check API key permissions in your OpenAI dashboard
         
-        **2. Missing Dependencies:**
-        - Check `requirements.txt` includes all packages
-        - Verify `src/` folder structure is complete
-        
-        **3. Network/Access Issues:**
+        **2. Network/Access Issues:**
+        - Check your internet connection
         - Some sites may block automated access
-        - Try with `selenium_enabled=False` in settings
         
-        **4. API Key Issues:**
-        - Verify API key is valid and has credits
-        - Check API key permissions
+        **3. Selenium/ChromeDriver Issues:**
+        - Ensure `packages.txt` includes chromium and chromium-driver
+        - Try disabling Selenium in Advanced Settings
+        
+        **4. Content Issues:**
+        - Try a different query
+        - Reduce Top-K Results or Max Pages in settings
         """)
+        
+        # Show error details in expander (collapsed by default)
+        with st.expander("🔍 Show Technical Details"):
+            import traceback
+            error_trace = traceback.format_exc()
+            st.code(error_trace, language="python")
 
-# Display results
+# Display results - Answer at the top!
 if st.session_state.results:
     results = st.session_state.results
     
     st.markdown("---")
-    st.markdown("## 📊 Research Results")
     
-    # Metrics
+    # Show answer FIRST at the top with prominent styling
+    st.markdown("## 🤖 AI-Generated Answer")
+    
+    # Get the answer
+    final_answer = results.get('final_answer', 'No answer generated')
+    
+    # Display answer using native Streamlit markdown (allows tables, lists, formatting)
+    # The CSS styling defined at the top will apply automatically
+    st.markdown(final_answer)
+    
+    st.markdown("---")
+    
+    # Then show metrics below
+    st.markdown("### 📊 Research Statistics")
+    
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
@@ -514,17 +608,6 @@ if st.session_state.results:
             "📝 Total Words",
             f"{total_words:,}"
         )
-    
-    # Answer
-    st.markdown("### 🤖 AI-Generated Answer")
-    
-    answer_container = st.container()
-    with answer_container:
-        st.markdown(f"""
-        <div class="result-box">
-            {results.get('final_answer', 'No answer generated')}
-        </div>
-        """, unsafe_allow_html=True)
     
     # Download answer
     col1, col2, col3 = st.columns([1, 1, 1])
