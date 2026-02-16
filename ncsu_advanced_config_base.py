@@ -87,7 +87,7 @@ The NCSU website provides comprehensive information about your query. The conten
 class OpenAIProvider(LLMProvider):
     """OpenAI LLM provider"""
     
-    def __init__(self, model: str = "gpt-4o", temperature: float = 0.7, max_tokens: int = 8000):
+    def __init__(self, model: str = "gpt-4o", temperature: float = 0.7, max_tokens: int = 4000):
         super().__init__("openai", model, temperature, max_tokens)
         try:
             import openai
@@ -756,3 +756,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
