@@ -1,39 +1,10 @@
-
-# ========================================
-# 🔧 LLM MODEL CONFIGURATION
-# ========================================
-
-# LLM for Answer Generation (Quality)
-ANSWER_LLM_PROVIDER = 'openai'  # Options: 'openai', 'anthropic', 'mock'
-ANSWER_LLM_MODEL = 'gpt-4o'  # OpenAI: 'gpt-4o', 'gpt-4-turbo' | Anthropic: 'claude-3-sonnet-20240229', 'claude-3-opus-20240229'
-ANSWER_LLM_TEMPERATURE = 0.3
-ANSWER_LLM_MAX_TOKENS = 4000
-MAX_CONTEXT_TOKENS = 120000  # Max tokens for prompt (gpt-4o=128k, leave buffer)
-
-# LLM for Content Grading (Speed)
-GRADING_LLM_PROVIDER = 'openai'  # Options: 'openai', 'anthropic', 'mock'
-GRADING_LLM_MODEL = 'gpt-4o-mini'  # OpenAI: 'gpt-4o-mini', 'gpt-3.5-turbo' | Anthropic: 'claude-3-haiku-20240307'
-GRADING_LLM_TEMPERATURE = 0.3
-GRADING_LLM_MAX_TOKENS = 10
-MAX_GRADING_CONTENT_LENGTH = 2000
-
 #!/usr/bin/env python3
 """
 NCSU Advanced Research Assistant - OPTIMIZED VERSION WITH STREAMING
 ====================================================================
 
-Performance Optimizations:
-- Parallel content extraction and LLM grading
-- Content truncation for faster grading
-- Separate models for grading (fast) vs answers (quality)
-- Early stopping when high-quality content found
-- Caching for pages and grades
-- Reduced default parameters for speed
-- Token limit management to prevent context overflow
-
-Streaming:
-- Word-by-word output for answer generation (OpenAI + Anthropic)
-- Controlled via 'stream_answer' config flag
+Key change: stream_response() is now a GENERATOR that yields text chunks.
+This lets both the terminal (print) and Streamlit (st.write_stream) consume it.
 
 Usage:
     1. Edit the config dictionary in main()
@@ -47,7 +18,7 @@ import yaml
 import hashlib
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Generator
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 
@@ -98,9 +69,15 @@ class LLMProvider:
     def generate_response(self, prompt: str) -> str:
         raise NotImplementedError
 
-    def stream_response(self, prompt: str) -> str:
-        """Stream response word-by-word. Falls back to generate_response if not overridden."""
-        return self.generate_response(prompt)
+    def stream_response(self, prompt: str) -> Generator[str, None, None]:
+        """
+        GENERATOR that yields text chunks one at a time.
+        Works with both:
+          - Terminal:   for chunk in provider.stream_response(p): print(chunk, end="", flush=True)
+          - Streamlit:  st.write_stream(provider.stream_response(p))
+        """
+        # Default: yield the whole response as one chunk
+        yield self.generate_response(prompt)
 
 
 class MockLLMProvider(LLMProvider):
@@ -112,38 +89,28 @@ class MockLLMProvider(LLMProvider):
     def generate_response(self, prompt: str) -> str:
         if "grade" in prompt.lower() or "relevance" in prompt.lower():
             return "0.75"
-
         query_text = prompt.split('Question:')[-1].split('Content:')[0].strip() if 'Question:' in prompt else 'your query'
         content_preview = prompt.split('Content:')[-1][:200] if 'Content:' in prompt else 'Content analyzed'
-
         return f"""Based on NCSU website analysis for: "{query_text}"
-
-**Content Analysis:**
-- Analyzed {len(prompt.split())} words from NCSU website
-- Applied relevance filtering and grading
-- Selected most relevant content
 
 **Key Information:**
 {content_preview}...
 
-**Summary:**
-The NCSU website provides comprehensive information. Content selected based on relevance scoring.
+**Summary:** The NCSU website provides comprehensive information.
 
-*Note: Mock response. Configure real LLM provider (OpenAI/Anthropic) for AI-generated answers.*"""
+*Note: Mock response. Configure a real LLM provider for AI-generated answers.*"""
 
-    def stream_response(self, prompt: str) -> str:
-        """Mock streaming — just prints the response character by character"""
+    def stream_response(self, prompt: str) -> Generator[str, None, None]:
+        """Yield word by word for mock demo effect"""
         import time
         response = self.generate_response(prompt)
-        for char in response:
-            print(char, end="", flush=True)
-            time.sleep(0.005)
-        print()
-        return response
+        for word in response.split(' '):
+            yield word + ' '
+            time.sleep(0.02)
 
 
 class OpenAIProvider(LLMProvider):
-    """OpenAI LLM provider with streaming support"""
+    """OpenAI LLM provider — stream_response() is a generator"""
 
     def __init__(self, model: str = "gpt-4o", temperature: float = 0.7, max_tokens: int = 8000):
         super().__init__("openai", model, temperature, max_tokens)
@@ -151,7 +118,7 @@ class OpenAIProvider(LLMProvider):
             import openai
             api_key = os.getenv('OPENAI_API_KEY')
             if not api_key:
-                raise ValueError("❌ OPENAI_API_KEY not found. Set via: export OPENAI_API_KEY='your-key'")
+                raise ValueError("OPENAI_API_KEY not found. Set via: export OPENAI_API_KEY='your-key'")
             self.client = openai.OpenAI(api_key=api_key)
         except ImportError:
             raise ImportError("OpenAI package not installed. Run: pip install openai")
@@ -168,40 +135,37 @@ class OpenAIProvider(LLMProvider):
         except Exception as e:
             return f"Error generating response: {str(e)}"
 
-    def stream_response(self, prompt: str) -> str:
-        """Stream response token by token, printing each chunk as it arrives."""
-        full_response = ""
+    def stream_response(self, prompt: str) -> Generator[str, None, None]:
+        """
+        Generator that yields each token chunk from OpenAI streaming API.
+        Compatible with st.write_stream() and manual iteration.
+        """
         try:
             with self.client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
-                stream=True  # ← Key: enable streaming
+                stream=True
             ) as stream:
                 for chunk in stream:
                     delta = chunk.choices[0].delta.content
                     if delta:
-                        print(delta, end="", flush=True)  # flush=True is critical
-                        full_response += delta
-            print()  # Final newline after stream ends
+                        yield delta  # ← yield, not print
         except Exception as e:
-            error_msg = f"Error streaming response: {str(e)}"
-            print(error_msg)
-            return error_msg
-        return full_response
+            yield f"\n\nError during streaming: {str(e)}"
 
 
 class AnthropicProvider(LLMProvider):
-    """Anthropic Claude LLM provider with streaming support"""
+    """Anthropic Claude LLM provider — stream_response() is a generator"""
 
-    def __init__(self, model: str = "claude-3-sonnet-20240229", temperature: float = 0.7, max_tokens: int = 1000):
+    def __init__(self, model: str = "claude-3-sonnet-20240229", temperature: float = 0.7, max_tokens: int = 4000):
         super().__init__("anthropic", model, temperature, max_tokens)
         try:
             import anthropic
             api_key = os.getenv('ANTHROPIC_API_KEY')
             if not api_key:
-                raise ValueError("❌ ANTHROPIC_API_KEY not found. Set via: export ANTHROPIC_API_KEY='your-key'")
+                raise ValueError("ANTHROPIC_API_KEY not found. Set via: export ANTHROPIC_API_KEY='your-key'")
             self.client = anthropic.Anthropic(api_key=api_key)
         except ImportError:
             raise ImportError("Anthropic package not installed. Run: pip install anthropic")
@@ -218,30 +182,25 @@ class AnthropicProvider(LLMProvider):
         except Exception as e:
             return f"Error generating response: {str(e)}"
 
-    def stream_response(self, prompt: str) -> str:
-        """Stream response token by token using Anthropic's streaming API."""
-        full_response = ""
+    def stream_response(self, prompt: str) -> Generator[str, None, None]:
+        """
+        Generator that yields each text chunk from Anthropic streaming API.
+        Compatible with st.write_stream() and manual iteration.
+        """
         try:
             with self.client.messages.stream(
                 model=self.model,
                 max_tokens=self.max_tokens,
                 messages=[{"role": "user", "content": prompt}]
-                # Note: temperature is not supported in all streaming contexts;
-                # remove if you get an error with certain models
             ) as stream:
                 for text in stream.text_stream:
-                    print(text, end="", flush=True)  # flush=True is critical
-                    full_response += text
-            print()  # Final newline after stream ends
+                    yield text  # ← yield, not print
         except Exception as e:
-            error_msg = f"Error streaming response: {str(e)}"
-            print(error_msg)
-            return error_msg
-        return full_response
+            yield f"\n\nError during streaming: {str(e)}"
 
 
 class NCSUAdvancedResearcher:
-    """Advanced NCSU research assistant with performance optimizations and streaming"""
+    """Advanced NCSU research assistant with generator-based streaming"""
 
     def __init__(self, config: Dict[str, Any]):
         self.config = config
@@ -262,22 +221,8 @@ class NCSUAdvancedResearcher:
         self.output_dir = Path(config.get('output_dir', 'results'))
         self.output_dir.mkdir(exist_ok=True)
 
-        stream_status = "✅ ON" if config.get('stream_answer', True) else "❌ OFF"
-
-        print(f"🎯 NCSU Advanced Researcher (OPTIMIZED + STREAMING)")
-        print(f"🤖 Grading: {self.grading_provider.provider_name} ({self.grading_provider.model})")
-        print(f"🤖 Answer:  {self.answer_provider.provider_name} ({self.answer_provider.model})")
-        print(f"📡 Stream:  {stream_status}")
-        print(f"🔍 Top-K: {config.get('top_k', 10)}, Max Pages: {config.get('max_pages', 5)}")
-        print(f"📊 Threshold: {config.get('relevance_threshold', 0.6)}")
-        print(f"⚡ Parallel: Extract={config.get('parallel_extraction', True)} ({config.get('extraction_workers', 5)}w), "
-              f"Grade={config.get('parallel_grading', True)} ({config.get('grading_workers', 5)}w)")
-        print(f"💾 Cache: {config.get('enable_caching', True)}, 🛑 Early Stop: {config.get('enable_early_stopping', True)}")
-
     def _setup_grading_provider(self) -> LLMProvider:
-        """Setup fast LLM for grading (streaming not used for grading)"""
         provider = self.config.get('grading_provider', self.config.get('llm_provider', 'mock')).lower()
-
         if provider == 'openai':
             return OpenAIProvider(
                 model=self.config.get('grading_model', 'gpt-4o-mini'),
@@ -293,9 +238,7 @@ class NCSUAdvancedResearcher:
         return MockLLMProvider()
 
     def _setup_answer_provider(self) -> LLMProvider:
-        """Setup quality LLM for answer generation"""
         provider = self.config.get('llm_provider', 'mock').lower()
-
         if provider == 'openai':
             return OpenAIProvider(
                 model=self.config.get('llm_model', 'gpt-4o'),
@@ -311,7 +254,7 @@ class NCSUAdvancedResearcher:
         return MockLLMProvider()
 
     def grade_content_relevance(self, content: str, query: str) -> float:
-        """Grade content relevance with caching and truncation (no streaming needed here)"""
+        """Grade content relevance — always non-streaming"""
         if self.cache:
             cached = self.cache.get_grade(content, query)
             if cached is not None:
@@ -332,7 +275,6 @@ Scale: 1.0=Perfect, 0.8-0.9=Highly relevant, 0.6-0.7=Moderate, 0.4-0.5=Somewhat,
 Return ONLY a number (e.g., 0.85):"""
 
         try:
-            # Always use non-streaming for grading — we just need a number
             response = self.grading_provider.generate_response(prompt)
             import re
             match = re.search(r'(\d+\.?\d*)', response)
@@ -347,7 +289,6 @@ Return ONLY a number (e.g., 0.85):"""
             return 0.5
 
     def _extract_single_page(self, result) -> Optional[Dict]:
-        """Extract content from single page (parallel)"""
         try:
             if self.cache:
                 cached = self.cache.get_page(str(result.url))
@@ -356,7 +297,6 @@ Return ONLY a number (e.g., 0.85):"""
                         'title': result.title, 'url': str(result.url), 'content': cached,
                         'word_count': len(cached.split()), 'extraction_success': True, 'cached': True
                     }
-
             pages = self.scraper.scrape_pages([result])
             if pages and pages[0].extraction_success:
                 page = pages[0]
@@ -371,7 +311,6 @@ Return ONLY a number (e.g., 0.85):"""
         return None
 
     def _grade_single_page(self, page: Dict, query: str) -> Dict:
-        """Grade single page (parallel)"""
         try:
             score = self.grade_content_relevance(page['content'], query)
             return {**page, 'relevance_score': score}
@@ -380,11 +319,9 @@ Return ONLY a number (e.g., 0.85):"""
             return {**page, 'relevance_score': 0.5}
 
     def _estimate_tokens(self, text: str) -> int:
-        """Rough token estimation (1 token ≈ 4 characters)"""
         return len(text) // 4
 
     def _truncate_sources_to_fit(self, sources: List[Dict], query: str, max_tokens: int = 120000) -> List[Dict]:
-        """Truncate sources to fit within token limit"""
         prompt_overhead = 500
         response_reserve = self.config.get('llm_max_tokens', 4000)
         available_tokens = max_tokens - prompt_overhead - response_reserve - self._estimate_tokens(query)
@@ -394,7 +331,6 @@ Return ONLY a number (e.g., 0.85):"""
 
         for source in sources:
             content_tokens = self._estimate_tokens(source['content'])
-
             if used_tokens + content_tokens <= available_tokens:
                 truncated_sources.append(source)
                 used_tokens += content_tokens
@@ -415,13 +351,11 @@ Return ONLY a number (e.g., 0.85):"""
         return truncated_sources
 
     def _build_answer_prompt(self, query: str, sources: List[Dict]) -> str:
-        """Build the answer generation prompt from sources"""
         sources_text = "\n".join([
             f"=== SOURCE {i+1}: {s['title']} (Relevance: {s.get('relevance_score', 'N/A')}) ===\n"
             f"URL: {s['url']}\nContent: {s['content']}\n"
             for i, s in enumerate(sources)
         ])
-
         return f"""You are an expert research assistant. Based on the NCSU website content provided below, answer the user's question comprehensively and accurately.
 
 USER QUESTION: {query}
@@ -434,80 +368,60 @@ INSTRUCTIONS:
 - Extract and synthesize relevant information to answer the question
 - Provide a comprehensive, well-structured response
 - Use specific details and facts from the content
-- If the content contains the answer, provide it in full detail
-- If the content is incomplete, mention what information is available
 - Be accurate and factual - only use information from the provided content
 - Organize your response logically with clear paragraphs
-- Include specific details, names, dates, and facts when available
 
 COMPREHENSIVE ANSWER:"""
 
-    def generate_answer(self, content: str, query: str, sources: List[Dict]) -> str:
+    def get_answer_stream(self, query: str, sources: List[Dict]) -> Generator[str, None, None]:
         """
-        Generate final answer using quality LLM with token management.
-        Streams word-by-word to terminal if 'stream_answer' config is True.
+        PUBLIC method: returns a generator of text chunks.
+
+        Use in Streamlit:
+            full_text = st.write_stream(researcher.get_answer_stream(query, sources))
+
+        Use in terminal:
+            full_text = ""
+            for chunk in researcher.get_answer_stream(query, sources):
+                print(chunk, end="", flush=True)
+                full_text += chunk
         """
-        # Token management
         max_context_tokens = self.config.get('max_context_tokens', 120000)
-        original_source_count = len(sources)
         sources_to_use = self._truncate_sources_to_fit(sources, query, max_context_tokens)
-
-        if len(sources_to_use) < original_source_count:
-            print(f"⚠️ Token limit: Using {len(sources_to_use)}/{original_source_count} sources "
-                  f"to fit within {max_context_tokens} tokens")
-
         prompt = self._build_answer_prompt(query, sources_to_use)
-
-        # Log estimated token usage
-        estimated_tokens = self._estimate_tokens(prompt)
-        print(f"📊 Estimated prompt tokens: {estimated_tokens:,} (limit: {max_context_tokens:,})")
-
-        # ── Streaming vs non-streaming ──────────────────────────────────────
-        stream_enabled = self.config.get('stream_answer', True)
-
-        if stream_enabled:
-            print(f"\n{'=' * 70}")
-            print(f"🤖 ANSWER (streaming word-by-word):")
-            print(f"{'=' * 70}\n")
-            return self.answer_provider.stream_response(prompt)
-        else:
-            print(f"\n{'=' * 70}")
-            print(f"🤖 ANSWER (non-streaming):")
-            print(f"{'=' * 70}\n")
-            response = self.answer_provider.generate_response(prompt)
-            print(response)
-            return response
+        yield from self.answer_provider.stream_response(prompt)
 
     def research(self, query: str) -> Dict[str, Any]:
-        """Conduct optimized research"""
-        print(f"\n🔍 OPTIMIZED RESEARCH")
-        print("=" * 70)
-        print(f"📋 Query: '{query}'")
-
+        """
+        Conducts all steps EXCEPT answer generation.
+        Returns results dict with filtered_pages ready for streaming.
+        Call get_answer_stream() separately to stream the answer.
+        """
         results = {
-            'query': query, 'timestamp': datetime.now().isoformat(), 'config': self.config,
-            'search_results': [], 'extracted_pages': [], 'graded_pages': [], 'filtered_pages': [],
-            'final_answer': '', 'sources': [],
+            'query': query,
+            'timestamp': datetime.now().isoformat(),
+            'config': self.config,
+            'search_results': [],
+            'extracted_pages': [],
+            'graded_pages': [],
+            'filtered_pages': [],
+            'final_answer': '',
+            'sources': [],
             'performance_stats': {'cached_pages': 0, 'cached_grades': 0, 'early_stopped': False}
         }
 
-        # ── Step 1: Search ─────────────────────────────────────────────────
-        print(f"\n📋 STEP 1: Searching NCSU...")
+        # Step 1: Search
         search_results = self.scraper.search(query, max_results=self.config.get('top_k', 10))
         results['search_results'] = [{'title': r.title, 'url': str(r.url), 'snippet': r.snippet} for r in search_results]
-        print(f"✅ Found {len(search_results)} results")
 
         if not search_results:
-            print("❌ No results")
             return results
 
-        # ── Step 2: Extract (Parallel) ────────────────────────────────────
+        # Step 2: Extract (Parallel)
         max_pages = self.config.get('max_pages', 5)
         pages_to_extract = search_results[:max_pages]
-
-        print(f"\n📋 STEP 2: Extracting {len(pages_to_extract)} pages (PARALLEL)...")
-
         extracted_pages = []
+
         if self.config.get('parallel_extraction', True):
             workers = self.config.get('extraction_workers', 5)
             with ThreadPoolExecutor(max_workers=workers) as executor:
@@ -516,8 +430,6 @@ COMPREHENSIVE ANSWER:"""
                     page = future.result()
                     if page:
                         extracted_pages.append(page)
-                        cached_str = " (cached)" if page.get('cached') else ""
-                        print(f"  ✅ {page['title'][:50]}{cached_str} ({page['word_count']:,} words)")
                         if page.get('cached'):
                             results['performance_stats']['cached_pages'] += 1
         else:
@@ -527,41 +439,28 @@ COMPREHENSIVE ANSWER:"""
                     extracted_pages.append(page)
 
         results['extracted_pages'] = extracted_pages
-        print(f"✅ Extracted {len(extracted_pages)} pages "
-              f"({sum(p['word_count'] for p in extracted_pages):,} words)")
 
         if not extracted_pages:
-            print("❌ No content")
             return results
 
-        # ── Step 3: Grade (Parallel) ──────────────────────────────────────
+        # Step 3: Grade (Parallel)
         if self.config.get('enable_grading', True):
-            print(f"\n📋 STEP 3: Grading (PARALLEL)...")
-
             graded_pages = []
             if self.config.get('parallel_grading', True):
                 workers = self.config.get('grading_workers', 5)
                 with ThreadPoolExecutor(max_workers=workers) as executor:
                     futures = {executor.submit(self._grade_single_page, p, query): p for p in extracted_pages}
-                    for i, future in enumerate(as_completed(futures), 1):
-                        graded = future.result()
-                        graded_pages.append(graded)
-                        print(f"  [{i}/{len(extracted_pages)}] {graded['title'][:40]}: {graded['relevance_score']:.3f}")
+                    for future in as_completed(futures):
+                        graded_pages.append(future.result())
             else:
-                for i, page in enumerate(extracted_pages, 1):
-                    graded = self._grade_single_page(page, query)
-                    graded_pages.append(graded)
-                    print(f"  [{i}/{len(extracted_pages)}] {graded['title'][:40]}: {graded['relevance_score']:.3f}")
-
+                for page in extracted_pages:
+                    graded_pages.append(self._grade_single_page(page, query))
             results['graded_pages'] = graded_pages
-            print(f"✅ Graded {len(graded_pages)} pages")
         else:
             graded_pages = [{**p, 'relevance_score': 1.0} for p in extracted_pages]
             results['graded_pages'] = graded_pages
 
-        # ── Step 4: Filter + Early Stop ───────────────────────────────────
-        print(f"\n📋 STEP 4: Filtering (threshold: {self.config.get('relevance_threshold', 0.6)})...")
-
+        # Step 4: Filter + Early Stop
         threshold = self.config.get('relevance_threshold', 0.6)
         filtered_pages = sorted(
             [p for p in graded_pages if p['relevance_score'] >= threshold],
@@ -572,72 +471,45 @@ COMPREHENSIVE ANSWER:"""
             early_threshold = self.config.get('early_stop_threshold', 0.85)
             early_min = self.config.get('early_stop_min_pages', 3)
             high_quality = [p for p in filtered_pages if p['relevance_score'] >= early_threshold]
-
             if len(high_quality) >= early_min:
-                print(f"🛑 Early stop: {len(high_quality)} pages ≥ {early_threshold}")
                 filtered_pages = high_quality[:early_min]
                 results['performance_stats']['early_stopped'] = True
 
         if not filtered_pages:
-            print(f"⚠️ No pages meet threshold, using top page")
             filtered_pages = [max(graded_pages, key=lambda x: x['relevance_score'])]
 
         results['filtered_pages'] = filtered_pages
-        print(f"✅ {len(filtered_pages)} pages filtered "
-              f"({sum(p['word_count'] for p in filtered_pages):,} words)")
-
-        # ── Step 5: Generate Answer (with optional streaming) ─────────────
-        print(f"\n📋 STEP 5: Generating answer...")
-        final_answer = self.generate_answer('', query, filtered_pages)
-        results['final_answer'] = final_answer
-        print(f"\n✅ Answer generated ({len(final_answer):,} chars)")
-
         results['sources'] = [
-            {
-                'title': p['title'], 'url': p['url'],
-                'relevance_score': p['relevance_score'], 'word_count': p['word_count']
-            }
+            {'title': p['title'], 'url': p['url'],
+             'relevance_score': p['relevance_score'], 'word_count': p['word_count']}
             for p in filtered_pages
         ]
 
         return results
 
     def save_results(self, results: Dict[str, Any]) -> Dict[str, str]:
-        """Save results to files"""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        query_safe = "".join(
-            c for c in results['query'] if c.isalnum() or c in (' ', '-', '_')
-        ).rstrip()
+        query_safe = "".join(c for c in results['query'] if c.isalnum() or c in (' ', '-', '_')).rstrip()
         query_short = query_safe[:50].replace(' ', '_')
-
         files = {}
 
-        # Answer file
         answer_file = self.output_dir / f"answer_{query_short}_{timestamp}.txt"
         with open(answer_file, 'w', encoding='utf-8') as f:
             f.write(f"Query: {results['query']}\n")
-            f.write(f"Timestamp: {results['timestamp']}\n")
-            f.write(f"Grading: {self.grading_provider.provider_name} ({self.grading_provider.model})\n")
-            f.write(f"Answer: {self.answer_provider.provider_name} ({self.answer_provider.model})\n")
-            f.write(f"Streaming: {self.config.get('stream_answer', True)}\n\n")
+            f.write(f"Timestamp: {results['timestamp']}\n\n")
             f.write("=" * 50 + "\nANSWER:\n" + "=" * 50 + "\n")
-            f.write(results['final_answer'])
+            f.write(results.get('final_answer', ''))
             f.write("\n\n" + "=" * 50 + "\nSOURCES:\n" + "=" * 50 + "\n")
             for i, s in enumerate(results['sources'], 1):
                 f.write(f"[{i}] {s['title']} (Relevance: {s['relevance_score']:.3f})\n")
                 f.write(f"    {s['url']} ({s['word_count']:,} words)\n\n")
-            f.write("=" * 50 + "\nPERFORMANCE:\n" + "=" * 50 + "\n")
-            f.write(f"Cached pages: {results['performance_stats']['cached_pages']}\n")
-            f.write(f"Early stopped: {results['performance_stats']['early_stopped']}\n")
         files['answer'] = str(answer_file)
 
-        # Data file
         data_file = self.output_dir / f"data_{query_short}_{timestamp}.json"
         with open(data_file, 'w', encoding='utf-8') as f:
             json.dump(results, f, indent=2, ensure_ascii=False)
         files['data'] = str(data_file)
 
-        # Config file
         config_file = self.output_dir / f"config_{query_short}_{timestamp}.yaml"
         with open(config_file, 'w', encoding='utf-8') as f:
             yaml.dump(results['config'], f, default_flow_style=False)
@@ -645,120 +517,78 @@ COMPREHENSIVE ANSWER:"""
 
         return files
 
-    def display_results(self, results: Dict[str, Any]):
-        """Display sources and performance summary (answer was already streamed)"""
-        print(f"\n{'=' * 70}")
-        print(f"SOURCES & PERFORMANCE SUMMARY")
-        print(f"{'=' * 70}")
-        print(f"\n🔍 QUERY: {results['query']}")
-        print(f"\n📚 SOURCES:")
-        for i, s in enumerate(results['sources'], 1):
-            print(f"[{i}] {s['title']} (Relevance: {s['relevance_score']:.3f})")
-            print(f"    {s['url']} ({s['word_count']:,} words)")
-        print(f"\n⚡ PERFORMANCE:")
-        print(f"💾 Cached: {results['performance_stats']['cached_pages']} pages")
-        print(f"🛑 Early stopped: {results['performance_stats']['early_stopped']}")
-
 
 def main():
-    """Main function with optimized + streaming configuration"""
+    """Terminal entry point — streams answer to stdout"""
 
     try:
         from dotenv import load_dotenv
         load_dotenv()
-        print("✅ Loaded .env")
     except Exception:
         pass
 
-    # ========================================================================
-    # 🔧 CONFIGURATION — edit here
-    # ========================================================================
-    
     config = {
-    # Query
-    'query': 'What are the requirements for the Computer Science major at NC State University?',
-    
-    # LLM for Answer (Quality)
-    'llm_provider': ANSWER_LLM_PROVIDER,
-    'llm_model': ANSWER_LLM_MODEL,
-    'llm_temperature': ANSWER_LLM_TEMPERATURE,
-    'llm_max_tokens': ANSWER_LLM_MAX_TOKENS,
-    'max_context_tokens': MAX_CONTEXT_TOKENS,  # gpt-4o=128k, leave buffer
-    
-    # LLM for Grading (Speed)
-    'grading_provider': GRADING_LLM_PROVIDER,
-    'grading_model': GRADING_LLM_MODEL,
-    'grading_temperature': GRADING_LLM_TEMPERATURE,
-    'grading_max_tokens': GRADING_LLM_MAX_TOKENS,
-    'max_grading_content_length': MAX_GRADING_CONTENT_LENGTH,
-    
-    # Search (Optimized for Token Limits)
-    'top_k': 10,
-    'max_pages': 5,  # Reduced to avoid token overflow
-    'relevance_threshold': 0.6,
-    'enable_grading': False,
-    
-    # Performance Optimizations
-    'parallel_extraction': True,
-    'extraction_workers': 5,
-    'parallel_grading': True,
-    'grading_workers': 5,
-    'enable_caching': True,
-    'enable_early_stopping': True,
-    'early_stop_threshold': 0.85,
-    'early_stop_min_pages': 3,
-    
-    # Extraction
-    'selenium_enabled': True,
-    'enhanced_extraction': True,
-    'timeout': 30,
-    
-    # Output
-    'output_dir': 'results',
-    
-    # API Keys
-    'openai_api_key': os.getenv('OPENAI_API_KEY'),
-}
+        'query': 'What are the requirements for the Computer Science major at NC State University?',
+        'llm_provider': 'openai',
+        'llm_model': 'gpt-4o',
+        'llm_temperature': 0.3,
+        'llm_max_tokens': 4000,
+        'max_context_tokens': 120000,
+        'grading_provider': 'openai',
+        'grading_model': 'gpt-4o-mini',
+        'grading_temperature': 0.3,
+        'grading_max_tokens': 10,
+        'max_grading_content_length': 2000,
+        'top_k': 10,
+        'max_pages': 5,
+        'relevance_threshold': 0.6,
+        'enable_grading': True,
+        'parallel_extraction': True,
+        'extraction_workers': 5,
+        'parallel_grading': True,
+        'grading_workers': 5,
+        'enable_caching': True,
+        'enable_early_stopping': True,
+        'early_stop_threshold': 0.85,
+        'early_stop_min_pages': 3,
+        'selenium_enabled': True,
+        'enhanced_extraction': True,
+        'timeout': 30,
+        'output_dir': 'results',
+        'openai_api_key': os.getenv('OPENAI_API_KEY'),
+    }
 
-    # Push API keys into environment if provided in config
     if config.get('openai_api_key'):
         os.environ['OPENAI_API_KEY'] = config['openai_api_key']
-    if config.get('anthropic_api_key'):
-        os.environ['ANTHROPIC_API_KEY'] = config['anthropic_api_key']
-
-    print("🎯 NCSU Advanced Research Assistant (OPTIMIZED + STREAMING)")
-    print("=" * 60)
-    print(f"📋 Query:    {config['query']}")
-    print(f"🤖 Grading:  {config['grading_provider']} ({config['grading_model']})")
-    print(f"🤖 Answer:   {config['llm_provider']} ({config['llm_model']})")
-    print(f"📡 Streaming: {'ON' if config['stream_answer'] else 'OFF'}")
-    print("=" * 60)
 
     try:
         researcher = NCSUAdvancedResearcher(config)
+
+        print(f"\n🔍 Researching: {config['query']}\n")
         results = researcher.research(config['query'])
 
-        # display_results only shows sources/perf; answer was already streamed
-        researcher.display_results(results)
+        print(f"\n{'=' * 70}")
+        print("🤖 ANSWER (streaming):")
+        print(f"{'=' * 70}\n")
 
-        print(f"\n📋 STEP 6: Saving results...")
+        # Terminal streaming — iterate the generator manually
+        full_answer = ""
+        for chunk in researcher.get_answer_stream(config['query'], results['filtered_pages']):
+            print(chunk, end="", flush=True)
+            full_answer += chunk
+        print()
+
+        results['final_answer'] = full_answer
         saved_files = researcher.save_results(results)
-        for file_type, path in saved_files.items():
-            print(f"💾 {file_type.title()}: {path}")
 
-        print(f"\n🎉 COMPLETE!")
-        print(f"✅ Found    {len(results['search_results'])} search results")
-        print(f"✅ Extracted {len(results['extracted_pages'])} pages "
-              f"({sum(p['word_count'] for p in results['extracted_pages']):,} words)")
-        print(f"✅ Graded   {len(results['graded_pages'])} pages")
-        print(f"✅ Filtered {len(results['filtered_pages'])} pages "
-              f"({sum(p['word_count'] for p in results['filtered_pages']):,} words)")
-        print(f"✅ Answer   {len(results['final_answer']):,} chars")
-        print(f"💾 Cached:  {results['performance_stats']['cached_pages']} pages")
-        print(f"🛑 Early stopped: {results['performance_stats']['early_stopped']}")
+        print(f"\n📚 SOURCES:")
+        for i, s in enumerate(results['sources'], 1):
+            print(f"[{i}] {s['title']} ({s['relevance_score']:.3f}) — {s['url']}")
+
+        print(f"\n💾 Saved: {saved_files.get('answer')}")
 
     except KeyboardInterrupt:
-        print("\n⚠️ Interrupted by user")
+        print("\n⚠️ Interrupted")
     except Exception as e:
         print(f"\n❌ Error: {e}")
         import traceback
