@@ -151,7 +151,7 @@ st.markdown("""
     .st-key-shuffle_btn .stButton>button {
         background-color: #28a745 !important;
         min-width: 50px !important;
-        max-width: 80px !important;
+        max-width: 100px !important;
         height: 50px !important;
         padding: 0.5rem !important;
         font-size: 1.5em !important;
