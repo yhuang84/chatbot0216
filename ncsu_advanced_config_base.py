@@ -658,7 +658,7 @@ def main():
         # Search & extraction
         'top_k': 20,
         'max_pages': 10,
-        'relevance_threshold': 0.2,
+        'relevance_threshold': 0,
 
         # Grading ON so pages are actually filtered meaningfully
         'enable_grading': True,
@@ -728,6 +728,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
