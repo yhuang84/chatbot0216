@@ -185,6 +185,7 @@ class NCSUAdvancedResearcher:
         self.config = config
         self.logger = setup_logger("ncsu_advanced_researcher")
         self.cache = ContentCache() if config.get('enable_caching', True) else None
+        self.progress_callback = config.get('progress_callback', None)
 
         self.grading_provider = self._setup_grading_provider()
         self.answer_provider = self._setup_answer_provider()
@@ -431,6 +432,9 @@ COMPREHENSIVE ANSWER:"""
                         print(f"  ✅ {page['title'][:50]}{cached_str} ({page['word_count']:,} words)")
                         if page.get('cached'):
                             results['performance_stats']['cached_pages'] += 1
+                        # Call progress callback if provided
+                        if self.progress_callback:
+                            self.progress_callback('extraction', page)
         else:
             for r in pages_to_extract:
                 page = self._extract_single_page(r)
