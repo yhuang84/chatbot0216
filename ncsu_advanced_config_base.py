@@ -45,7 +45,7 @@ from utils.logger import setup_logger
 # ========================================
 
 ANSWER_LLM_PROVIDER = 'openai'
-ANSWER_LLM_MODEL = 'gpt-5.2'        # gpt-5-mini does not exist — use gpt-4o or gpt-4o-mini
+ANSWER_LLM_MODEL = 'gpt-4o'        # gpt-5-mini does not exist — use gpt-4o or gpt-4o-mini
 ANSWER_LLM_TEMPERATURE = 0.1            # lower = more factual, less hallucination
 ANSWER_LLM_MAX_TOKENS = 4000
 MAX_CONTEXT_TOKENS = 120000             # CRITICAL: was 4000 → model received almost NO source content
@@ -666,5 +666,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
