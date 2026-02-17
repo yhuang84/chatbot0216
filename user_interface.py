@@ -385,32 +385,51 @@ with st.sidebar:
             )
 
 # Main content area
-st.markdown("### 📝 Enter Your Research Query")
+st.markdown("### 🔍 Search")
 
 query = st.text_area(
-    "What would you like to research about NC State?",
+    "",
     value=st.session_state.query,
     height=100,
-    placeholder="Example: How can I get reimbursement for my travel expenses as a student?",
-    key="query_input"
+    placeholder="",
+    key="query_input",
+    label_visibility="collapsed"
 )
 
 st.markdown("**💡 Example Queries:**")
+
+# Define all available example queries
+import random
+all_examples = [
+    ("🎓 Graduate Programs", "What are the computer science graduate programs at NCSU?"),
+    ("💰 Financial Aid", "What kinds of scholarships are available for students?"),
+    ("✈️ Travel Reimbursement", "How can I get reimbursement for my travel expenses?"),
+    ("📚 Library Resources", "What research databases are available through NCSU libraries?"),
+    ("🏠 Housing Options", "What on-campus housing options are available for graduate students?"),
+    ("🔬 Research Opportunities", "How can I get involved in undergraduate research at NC State?"),
+    ("📝 Registration", "What is the process for course registration at NCSU?"),
+    ("🎯 Career Services", "What career counseling services does NC State offer?"),
+]
+
+# Initialize random examples in session state if not exists
+if 'example_queries' not in st.session_state:
+    st.session_state.example_queries = random.sample(all_examples, 3)
+
 examples_col1, examples_col2, examples_col3 = st.columns(3)
 
 with examples_col1:
-    if st.button("🎓 Graduate Programs", use_container_width=True):
-        st.session_state.query = "What are the computer science graduate programs at NCSU?"
+    if st.button(st.session_state.example_queries[0][0], use_container_width=True):
+        st.session_state.query = st.session_state.example_queries[0][1]
         st.rerun()
 
 with examples_col2:
-    if st.button("💰 Financial Aid", use_container_width=True):
-        st.session_state.query = "What kinds of scholarships are available for students?"
+    if st.button(st.session_state.example_queries[1][0], use_container_width=True):
+        st.session_state.query = st.session_state.example_queries[1][1]
         st.rerun()
 
 with examples_col3:
-    if st.button("✈️ Travel Reimbursement", use_container_width=True):
-        st.session_state.query = "How can I get reimbursement for my travel expenses?"
+    if st.button(st.session_state.example_queries[2][0], use_container_width=True):
+        st.session_state.query = st.session_state.example_queries[2][1]
         st.rerun()
 
 st.markdown("---")
@@ -479,6 +498,7 @@ if search_button and query:
     }
     
     progress_container = st.container()
+    extraction_status = st.empty()
     
     try:
         with progress_container:
@@ -510,15 +530,19 @@ if search_button and query:
             progress_bar.progress(50)
             percentage_text.markdown("**Progress: 50%**")
             status_text.info("📄 Extracting content from pages...")
-            time.sleep(0.3)
-            
-            progress_bar.progress(60)
-            percentage_text.markdown("**Progress: 60%**")
-            status_text.info("🤖 Analyzing content with AI...")
-            
-            # Run research — search, extract, grade, filter (no answer generation yet)
-            results = researcher.research(query)
-            
+        
+        # Run research with live status updates
+        results = researcher.research(query)
+        
+        # Show extraction results
+        if results.get('extracted_pages'):
+            extraction_messages = []
+            for page in results['extracted_pages']:
+                extraction_messages.append(f"✅ {page['title']} ({page['word_count']:,} words)")
+            extraction_status.success("\n\n".join(extraction_messages))
+            time.sleep(1.5)
+        
+        with progress_container:
             progress_bar.progress(80)
             percentage_text.markdown("**Progress: 80%**")
             status_text.success("✅ Content analysis complete")
@@ -530,7 +554,7 @@ if search_button and query:
 
         # ── Stream the answer into the UI ─────────────────────────────────────
         st.markdown("---")
-        st.markdown("## 🤖 AI-Generated Answer")
+        st.markdown("## 📝 Answer")
 
         # Build the exact same prompt that generate_answer() would have used
         sources_text = "\n".join([
@@ -580,6 +604,9 @@ COMPREHENSIVE ANSWER:"""
             progress_bar.empty()
             status_text.empty()
             percentage_text.empty()
+        
+        # Clear extraction status
+        extraction_status.empty()
 
         # Save answer + results
         results['final_answer'] = final_answer
@@ -627,7 +654,7 @@ if st.session_state.results and not st.session_state.running:
     # Re-show the answer on reruns (already streamed, now just markdown)
     if st.session_state.final_answer and not search_button:
         st.markdown("---")
-        st.markdown("## 🤖 AI-Generated Answer")
+        st.markdown("## 📝 Answer")
         st.markdown(st.session_state.final_answer)
     
     st.markdown("---")
