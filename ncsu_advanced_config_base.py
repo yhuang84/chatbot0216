@@ -42,14 +42,14 @@ from utils.logger import setup_logger
 
 # LLM for Answer Generation (Quality)
 ANSWER_LLM_PROVIDER = 'openai'  # Options: 'openai', 'anthropic', 'mock'
-ANSWER_LLM_MODEL = 'gpt-5-mini'  # OpenAI: 'gpt-4o', 'gpt-4-turbo' | Anthropic: 'claude-3-sonnet-20240229', 'claude-3-opus-20240229'
+ANSWER_LLM_MODEL = 'gpt-4o-mini'  # OpenAI: 'gpt-4o', 'gpt-4-turbo' | Anthropic: 'claude-3-sonnet-20240229', 'claude-3-opus-20240229'
 ANSWER_LLM_TEMPERATURE = 0.3
 ANSWER_LLM_MAX_TOKENS = 4000
 MAX_CONTEXT_TOKENS = 120000  # Max tokens for prompt (gpt-4o=128k, leave buffer)
 
 # LLM for Content Grading (Speed)
 GRADING_LLM_PROVIDER = 'openai'  # Options: 'openai', 'anthropic', 'mock'
-GRADING_LLM_MODEL = 'gpt-5-mini'  # OpenAI: 'gpt-4o-mini', 'gpt-3.5-turbo' | Anthropic: 'claude-3-haiku-20240307'
+GRADING_LLM_MODEL = 'gpt-4o-mini'  # OpenAI: 'gpt-4o-mini', 'gpt-3.5-turbo' | Anthropic: 'claude-3-haiku-20240307'
 GRADING_LLM_TEMPERATURE = 0.3
 GRADING_LLM_MAX_TOKENS = 10
 MAX_GRADING_CONTENT_LENGTH = 2000
