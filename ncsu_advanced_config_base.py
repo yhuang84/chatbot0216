@@ -313,7 +313,7 @@ Return ONLY a number (e.g., 0.85):"""
         return len(text) // 4
 
     def _truncate_sources_to_fit(self, sources: List[Dict], query: str, max_tokens: int = 120000) -> List[Dict]:
-        prompt_overhead = 500
+        prompt_overhead = 1000
         response_reserve = self.config.get('llm_max_tokens', 4000)
         available_tokens = max_tokens - prompt_overhead - response_reserve - self._estimate_tokens(query)
 
@@ -666,4 +666,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
