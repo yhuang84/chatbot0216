@@ -83,43 +83,23 @@ class NCSUScraper:
         unique_results = []
         seen_urls = set()
         duplicates_removed = 0
-        invalid_results = 0
         
         for i, result in enumerate(results, 1):
-            url_str = str(result.url).strip()
-            title_str = (result.title or "").strip()
-            
-            # ✅ CRITICAL FIX: Filter out invalid "Untitled" results with empty/invalid URLs
-            # These are artifacts from Google Custom Search page structure
-            is_valid_result = (
-                url_str and  # URL must exist
-                url_str != "" and  # URL must not be empty
-                url_str != "about:blank" and  # Not a blank page
-                not url_str.startswith("javascript:") and  # Not a javascript link
-                len(url_str) > 20 and  # URL must be substantial (not just "https://")
-                self.target_domain in url_str  # Must be NCSU domain
-            )
-            
-            if not is_valid_result:
-                invalid_results += 1
-                print(f"   ❌ {i:2d}. INVALID: {title_str[:50] if title_str else 'Untitled'}...")
-                print(f"       Invalid URL: '{url_str[:100]}'")
-                continue
-            
-            # Deduplicate by URL
-            if url_str not in seen_urls:
+            url_str = str(result.url)
+            if url_str not in seen_urls and self.target_domain in url_str:
                 unique_results.append(result)
                 seen_urls.add(url_str)
-                print(f"   ✅ {len(unique_results):2d}. {title_str[:50] if title_str else 'Untitled'}...")
+                print(f"   ✅ {len(unique_results):2d}. {result.title[:50]}...")
                 print(f"       {url_str}")
             else:
                 duplicates_removed += 1
-                print(f"   ❌ {i:2d}. DUPLICATE: {title_str[:50] if title_str else 'Untitled'}...")
-                print(f"       Same URL as previous: {url_str}")
+                if url_str in seen_urls:
+                    print(f"   ❌ {i:2d}. DUPLICATE: {result.title[:50]}...")
+                else:
+                    print(f"   ❌ {i:2d}. WRONG DOMAIN: {result.title[:50]}...")
         
-        print(f"   📊 Invalid results removed: {invalid_results}")
         print(f"   📊 Duplicates removed: {duplicates_removed}")
-        print(f"   📊 Unique valid results: {len(unique_results)}")
+        print(f"   📊 Unique results: {len(unique_results)}")
         
         final_results = unique_results[:max_results]
         print(f"   📊 Final results (limited by top_k={max_results}): {len(final_results)}")
