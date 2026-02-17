@@ -312,68 +312,35 @@ Return ONLY a number (e.g., 0.85):"""
     def _estimate_tokens(self, text: str) -> int:
         return len(text) // 4
 
+    
     def _truncate_sources_to_fit(self, sources: List[Dict], query: str, max_tokens: int = 120000) -> List[Dict]:
-    """Intelligently truncate sources to fit context window while preserving complete information"""
-    prompt_overhead = 1000
-    response_reserve = self.config.get('llm_max_tokens', 8000)
-    available_tokens = max_tokens - prompt_overhead - response_reserve - self._estimate_tokens(query)
+        prompt_overhead = 500
+        response_reserve = self.config.get('llm_max_tokens', 4000)
+        available_tokens = max_tokens - prompt_overhead - response_reserve - self._estimate_tokens(query)
 
-    # Sort by relevance to prioritize best content
-    sorted_sources = sorted(sources, key=lambda x: x.get('relevance_score', 0.5), reverse=True)
-    
-    truncated_sources = []
-    used_tokens = 0
-    
-    # ADD THIS LOGGING
-    print(f"\n📊 CONTEXT WINDOW ANALYSIS:")
-    print(f"   Max tokens: {max_tokens:,}")
-    print(f"   Available for content: {available_tokens:,}")
-    print(f"   Sources to process: {len(sorted_sources)}")
-    print()
+        truncated_sources = []
+        used_tokens = 0
 
-    for i, source in enumerate(sorted_sources, 1):
-        content_tokens = self._estimate_tokens(source['content'])
-        
-        if used_tokens + content_tokens <= available_tokens:
-            truncated_sources.append(source)
-            used_tokens += content_tokens
-            # ADD THIS LOGGING
-            print(f"   ✅ [{i}] INCLUDED: {source['title'][:60]}")
-            print(f"       Score: {source.get('relevance_score', 0.5):.3f}, Tokens: {content_tokens:,}, Total: {used_tokens:,}/{available_tokens:,}")
-        else:
-            remaining_tokens = available_tokens - used_tokens
-            if remaining_tokens > 1000:
-                remaining_chars = remaining_tokens * 4
-                truncated_content = source['content'][:remaining_chars]
-                
-                # Try to truncate at sentence boundary
-                last_period = truncated_content.rfind('. ')
-                if last_period > remaining_chars * 0.8:
-                    truncated_content = truncated_content[:last_period + 1]
-                
-                truncated_sources.append({
-                    **source,
-                    'content': truncated_content + "\n[Content truncated due to length]",
-                    'truncated': True,
-                    'original_word_count': source['word_count'],
-                    'word_count': len(truncated_content.split())
-                })
-                used_tokens += remaining_tokens
-                # ADD THIS LOGGING
-                print(f"   ⚠️  [{i}] TRUNCATED: {source['title'][:60]}")
-                print(f"       Score: {source.get('relevance_score', 0.5):.3f}, Used: {remaining_tokens:,}, Total: {used_tokens:,}/{available_tokens:,}")
-                break
+        for source in sources:
+            content_tokens = self._estimate_tokens(source['content'])
+            if used_tokens + content_tokens <= available_tokens:
+                truncated_sources.append(source)
+                used_tokens += content_tokens
             else:
-                # ADD THIS LOGGING
-                print(f"   ❌ [{i}] SKIPPED: {source['title'][:60]}")
-                print(f"       Score: {source.get('relevance_score', 0.5):.3f}, Would need: {content_tokens:,}, Only {remaining_tokens:,} left")
+                remaining_tokens = available_tokens - used_tokens
+                if remaining_tokens > 500:
+                    remaining_chars = remaining_tokens * 4
+                    truncated_content = source['content'][:remaining_chars]
+                    truncated_sources.append({
+                        **source,
+                        'content': truncated_content,
+                        'truncated': True,
+                        'original_word_count': source['word_count'],
+                        'word_count': len(truncated_content.split())
+                    })
                 break
 
-    # ADD THIS SUMMARY
-    print(f"\n   📊 FINAL: {len(truncated_sources)}/{len(sorted_sources)} sources included")
-    print(f"   📊 Token usage: {used_tokens:,}/{available_tokens:,} ({100*used_tokens/available_tokens:.1f}%)")
-    
-    return truncated_sources
+        return truncated_sources
 
     def build_prompt(self, query: str, sources: List[Dict]) -> str:
         """
