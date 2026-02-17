@@ -456,7 +456,7 @@ if 'current_example' not in st.session_state:
 col1, col2 = st.columns([0.8, 5.2])
 
 with col1:
-    if st.button("🔀", key="shuffle_btn", type="primary"):
+    if st.button("🔀 SHUFFLE", key="shuffle_btn", type="primary"):
         st.session_state.current_example = random.choice(example_questions)
         st.rerun()
 
