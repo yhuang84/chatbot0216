@@ -349,7 +349,7 @@ with st.sidebar:
         "Temperature",
         min_value=0.0,
         max_value=1.0,
-        value=0.3,
+        value=0.7,
         step=0.1,
         help="Lower values = more deterministic, Higher values = more creative"
     )
