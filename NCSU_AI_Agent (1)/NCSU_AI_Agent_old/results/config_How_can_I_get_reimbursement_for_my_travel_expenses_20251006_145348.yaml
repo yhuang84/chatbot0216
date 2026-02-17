@@ -1,0 +1,28 @@
+concurrent_requests: 8
+delay: 1.0
+enable_grading: true
+enhanced_extraction: true
+extraction_timeout: 60
+llm_max_tokens: 4000
+llm_model: gpt-4.1-mini
+llm_provider: openai
+llm_temperature: 0.3
+log_level: INFO
+max_content_length: 50000
+max_pages: 20
+max_retries: 3
+min_content_length: 100
+openai_api_key: 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
+output_dir: results
+query: How can I get reimbursement for my travel expenses as a student?
+relevance_threshold: 0.1
+respect_robots_txt: true
+save_answer: true
+save_config: true
+save_data: true
+search_timeout: 30
+selenium_enabled: true
+timeout: 30
+top_k: 20
+user_agent: NCSU Research Assistant Bot 1.0
+verify_ssl: true

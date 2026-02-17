@@ -1,0 +1,166 @@
+Query: What kinds of scholarships or financial aid are available for students in the College of Textiles?
+Timestamp: 2025-10-04T11:47:52.501529
+LLM Provider: openai
+
+ANSWER:
+==================================================
+Based on the detailed information from the NC State University Wilson College of Textiles website and related sources, here is a comprehensive overview of the scholarships and financial aid available for students in the College of Textiles:
+
+---
+
+## 1. Undergraduate Scholarships and Financial Aid
+
+### A. Types of Scholarships
+The Wilson College of Textiles offers a variety of scholarships primarily for undergraduate students, including both merit-based and need-based awards. These scholarships aim to recognize academic excellence, leadership, service, and financial need.
+
+- **Merit-Based Scholarships:** Awarded based on academic success, leadership, community involvement, writing ability, and motivation in the textile industry.
+- **Need-Based Scholarships:** Awarded based on financial need as determined by the Free Application for Federal Student Aid (FAFSA).
+
+### B. Major Scholarship Programs for Incoming First-Year Students
+
+The College provides several prestigious scholarships for incoming first-year students, many of which are renewable for four years:
+
+| Scholarship Name                  | Amount (Annual)       | Enrichment Grants       | Eligibility Highlights                                         | Merit/Need-Based     |
+|---------------------------------|----------------------|------------------------|---------------------------------------------------------------|---------------------|
+| **ITT/Roger Milliken Centennial** | $22,000              | Up to $7,500           | Must major in Polymer and Color Chemistry, Textile Engineering, or Textile Technology | Merit               |
+| **Centennial Scholarship**       | $20,000              | Up to $7,500           | Open to all Textiles majors                                   | Merit               |
+| **Kimbrell Centennial Scholarship** | $20,000              | Up to $7,500           | Open to all Textiles majors                                   | Merit               |
+| **Textile Pioneer Scholarship**  | $14,000              | Up to $4,000           | For students from qualifying non-metropolitan NC counties (Tier 1 or Tier 2) | Both (Merit & Need)  |
+| **W. Duke Kimbrell Scholarship** | $22,500              | None                   | In-state students only, preference for Gaston County residents | Both (Merit & Need)  |
+| **NCTF Distinguished Merit Scholarship** | $5,000               | None                   | Open to all Textiles students                                 | Merit               |
+| **NCTF Distinguished Prestige Scholarship** | $2,500               | None                   | Open to all Textiles students                                 | Merit               |
+
+- **Enrichment Grants:** Many scholarships include enrichment grants that can be used for study abroad, career development, internships, and other educational opportunities.
+- **Scholar Programming:** Recipients of Centennial and Textile Pioneer Scholarships participate in specialized programming that includes leadership development, career readiness courses (e.g., T 104 Fabric of Success and Career Readiness), and honors seminars (T 491H) taught by the Dean and faculty.
+
+### C. Application Process and Eligibility
+- Students must apply for undergraduate admission to NC State by **November 10** (Early Action deadline) and select a Textiles major to be endorsed for the scholarship application.
+- The scholarship application opens in early to mid-December via **PackAssist** (https://ncsu.academicworks.com/).
+- For need-based scholarships, students must complete the **FAFSA** by January 31 of the enrollment year.
+- The Textile Pioneer Scholarship requires residency in qualifying rural or non-metropolitan counties in North Carolina.
+- All first-year scholarships are merit-based, with some also requiring demonstrated financial need.
+
+### D. Additional Scholarship Opportunities
+- The College supports external scholarships and encourages students to explore other funding sources.
+- Study abroad scholarships are available, including those through the Wilson College and NC State Study Abroad Office.
+- Students can apply financial aid and scholarships to study abroad programs if courses fulfill degree requirements.
+
+---
+
+## 2. Transfer Student Scholarships
+
+- The Wilson College of Textiles also offers scholarships specifically for transfer students.
+- These scholarships are merit-based and require the student to choose a Textiles major.
+- Transfer scholarship applications and details are available on the College’s scholarship webpage.
+
+---
+
+## 3. Graduate Scholarships and Financial Aid
+
+### A. Assistantships and Fellowships
+Graduate students in the Wilson College of Textiles, particularly in the Textile Engineering, Chemistry and Science (TECS) department, have access to several forms of financial support:
+
+- **Graduate Research Assistantships (RA):** Funded by faculty research grants, these provide tuition coverage, health insurance, and a stipend. Students work on research projects aligned with their thesis or dissertation.
+- **Graduate Teaching Assistantships (TA):** Students assist in teaching courses or labs and receive tuition coverage, health insurance, and a stipend.
+- **Fellowships:** Competitive awards that provide financial support without work requirements, often viewed favorably by employers. Examples include:
+  - National Science Foundation Graduate Research Fellowship
+  - NIH Research Service Awards
+  - EPA Science to Achieve Results Fellowship
+  - Ford Foundation Fellowships
+  - Department of Defense SMART Scholarship
+  - Sigma Xi Grants in Aid of Research
+
+### B. Graduate Student Support Plan (GSSP)
+- Provides tuition remission and health insurance benefits for eligible graduate students with assistantships or fellowships.
+- Eligibility requires full-time enrollment and satisfactory academic progress.
+
+### C. Other Financial Support
+- Alumni Association Graduate Fellowships and Andrews Fellowships for first-year graduate students.
+- Travel grants for conference attendance (limited funds, require presentation).
+- Residency requirements and tuition support policies apply, with guidance provided to establish in-state residency for tuition purposes.
+
+---
+
+## 4. Military and Veteran Scholarships
+
+- The College of Textiles participates in NC State’s military-affiliated scholarship programs.
+- Examples include:
+  - **Textile Military Scholarship:** For College of Textiles students in sophomore, junior, or senior years who are current ROTC members.
+  - **Libertees Scholarship:** Preference for veterans or children of veterans in the College of Textiles.
+- Students must apply through **PackAssist** by the priority deadline (usually February 15).
+- Additional military-related scholarships and grants are available through NC State’s Military and Veteran Services office.
+
+---
+
+## 5. Summary of Financial Aid Resources
+
+- **Merit-based scholarships** for incoming first-year and transfer students, with significant awards and enrichment grants.
+- **Need-based scholarships** requiring FAFSA completion.
+- **Graduate assistantships and fellowships** providing tuition, health insurance, and stipends.
+- **Study abroad scholarships and financial aid** applicable to international education experiences.
+- **Military and veteran scholarships** tailored for service members, veterans, and their families.
+- **Additional external scholarships** and funding opportunities encouraged.
+
+---
+
+## Useful Links and Contacts
+
+- Wilson College of Textiles Scholarships: https://textiles.ncsu.edu/student-resources/scholarships/
+- Scholarship Application Portal (PackAssist): https://ncsu.academicworks.com/
+- FAFSA Application: https://studentaid.gov/h/apply-for-aid/fafsa
+- Graduate Financial Support: https://textiles.ncsu.edu/academics/graduate-programs/masters-financial-support/
+- Military and Veteran Services Scholarships: https://veterans.ncsu.edu/admissions/scholarships-financial-aid/
+- Email for scholarship inquiries: **textiles-scholarships@ncsu.edu**
+
+---
+
+# **In Conclusion**
+
+The Wilson College of Textiles at NC State University offers a robust and diverse range of scholarships and financial aid options for both undergraduate and graduate students. These include high-value merit and need-based scholarships for first-year and transfer students, graduate assistantships and fellowships with comprehensive support packages, study abroad funding, and specialized military and veteran scholarships. Students are encouraged to apply early, complete the FAFSA for need-based aid, and take advantage of enrichment grants and programming designed to enhance their educational and professional development within the textile industry.
+
+---
+
+If you need specific guidance on eligibility or application procedures, contacting the College’s scholarship office directly or visiting their official scholarship webpages is recommended.
+
+==================================================
+SOURCES:
+[1] Scholarships | Wilson College Student Resources (Relevance: 0.900)
+    https://textiles.ncsu.edu/student-resources/scholarships/
+    (434 words)
+
+[2] Scholarships and Funding | Wilson College Student Resources (Relevance: 0.600)
+    https://textiles.ncsu.edu/student-resources/study-abroad/scholarships-and-funding/
+    (602 words)
+
+[3] Textiles Scholarships (Relevance: 0.900)
+    https://textiles.ncsu.edu/scholarships/
+    (756 words)
+
+[4] Master's Financial Support | Wilson College of Textiles (Relevance: 0.800)
+    https://textiles.ncsu.edu/academics/graduate-programs/masters-financial-support/
+    (1,159 words)
+
+[5] TECS Graduate Handbook | Wilson College of Textiles (Relevance: 0.900)
+    https://textiles.ncsu.edu/academics/graduate-programs/tecs-graduate-handbook/
+    (15,905 words)
+
+[6] Scholarship Types (Relevance: 1.000)
+    https://textiles.ncsu.edu/scholarships/scholarship-types/
+    (1,624 words)
+
+[7] Textiles Scholarship Application Information | Wilson College of ... (Relevance: 0.800)
+    https://textiles.ncsu.edu/admissions/scholarships-and-financial-aid/textiles-scholarship-apply/
+    (956 words)
+
+[8] Scholarships and Financial Aid | Military and Veteran Services (Relevance: 0.700)
+    https://veterans.ncsu.edu/admissions/scholarships-financial-aid/
+    (3,636 words)
+
+[9] Wilson College of Textiles (Relevance: 0.850)
+    https://catalog.ncsu.edu/undergraduate/textiles/textiles.pdf
+    (904 words)
+
+[10] Textile Technology | Wilson College Student Resources (Relevance: 0.400)
+    https://textiles.ncsu.edu/student-resources/advising/first-year-course-registration/tt/
+    (552 words)
+

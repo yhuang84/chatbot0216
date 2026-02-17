@@ -1,0 +1,185 @@
+Query: How can I get reimbursement for my travel expenses as a student?
+Timestamp: 2025-10-06T14:52:51.004055
+LLM Provider: openai
+
+ANSWER:
+==================================================
+Based on the comprehensive information from NC State University sources, here is how you, as a student, can get reimbursement for your travel expenses:
+
+---
+
+## 1. Understand the Type of Travel and Your Status
+
+- **Student Travel Classification:**
+  - If you are traveling **as an employee of the state** (e.g., a graduate assistantship or student worker), your travel expenses are considered official state business and reimbursed accordingly.
+  - If you are a **non-employee student** traveling on official state business (e.g., to present research), you are subject to the same travel policies as university employees.
+  - If you are traveling to **fulfill a course requirement for academic credit**, prior written approval is required.
+  - International students should consult with the Controller’s Office Tax Specialist to confirm eligibility and tax implications.
+
+---
+
+## 2. Obtain Travel Authorization Before Your Trip
+
+- **Travel Authorization (TA) is required prior to travel** to qualify for reimbursement of overnight travel costs or meals.
+- For students (non-employees), you must complete and have approved the **AP104 Non-Employee Travel Authorization form** before travel.
+- The TA must be approved by your department head or designee.
+- For travel involving personal days or driving vs. flying, you must provide documented cost comparisons and justification as part of the TA.
+- Submit your TA at least 30 days before travel to allow time for approvals.
+
+---
+
+## 3. Keep Detailed Documentation During Travel
+
+- Collect **original, itemized receipts** for all expenses you will request reimbursement for, except for meals (which are reimbursed on a per diem basis and do not require receipts).
+- Receipts must show:
+  - Name of the traveler (you)
+  - Date(s) of service or purchase
+  - Amount paid and method of payment
+  - Vendor name and address
+- For mileage reimbursement, keep mileage logs or maps showing routes.
+- For international travel, convert foreign currency expenses to USD using approved currency converters (e.g., Oanda) and save conversion documentation.
+
+---
+
+## 4. Submit Travel Reimbursement (TR) After Your Trip
+
+- After travel, create and submit a **Travel Reimbursement** request through the **Travel Center** in your MyPack Portal or via your department’s designated process.
+- Attach all required receipts and documentation.
+- For non-employees and students, the approved AP104 form must be attached with the reimbursement request.
+- Meals are reimbursed per diem; do not submit meal receipts.
+- Mileage reimbursement follows NC State’s mileage rates and requires documentation.
+- If you used third-party lodging (e.g., Airbnb), pre-approval is required, and reimbursement is only possible if approved in advance.
+- Submit your reimbursement request **within 30 days of the travel end date** to avoid delays or denial. Late submissions require a memo from the Department Head explaining the delay.
+
+---
+
+## 5. Specific Travel Awards and Funding Opportunities for Students
+
+### Graduate Students
+
+- The **Graduate Student Association (GSA)** offers **Travel Awards** and **Travel Assistance Awards** to help reimburse travel expenses related to conference attendance.
+- These awards operate on a **reimbursement basis**: you pay expenses upfront and then submit receipts for reimbursement.
+- Eligible expenses include conference registration, airfare, hotel, meals (per diem), mileage (if driving your own vehicle), parking, and tips within policy limits.
+- You must submit a Travel Authorization (TA) following NC State policy.
+- Reimbursement is made directly to the student who paid the expenses.
+- Applications require abstract acceptance confirmation, letters of recommendation, and DGP authorization.
+- Awards are limited and merit-based.
+
+### Undergraduate Students
+
+- The **Office of Undergraduate Research (OUR)** offers **Travel Awards** for undergraduates presenting original research at conferences.
+- Awards provide up to $200, matched by your mentor or home department.
+- Funds are transferred to your mentor or department, who then reimburse you after travel.
+- Eligible expenses include conference registration, transportation (taxi, Uber, airfare), lodging (hotels/motels), meals (per diem), mileage (if driving your own vehicle), parking, and small tips.
+- Airbnb or third-party accommodations are generally **not reimbursable** unless pre-approved.
+- You must submit the **Travel Award Application** along with mentor confirmation.
+- Reimbursement paperwork and a reflection on the experience are required after travel.
+- Travel awards are reimbursements only; no upfront funds are provided.
+
+---
+
+## 6. General Policies and Guidelines
+
+- **Meals**: Reimbursed only during overnight travel and on a per diem basis; receipts not required.
+- **Lodging**: Must be from commercial lodging with itemized receipts showing proof of payment.
+- **Transportation**: Airfare reimbursed at coach class rates; baggage fees and airport charges are reimbursable.
+- **Mileage**: Mileage reimbursement rates apply; mileage logs/maps required.
+- **Tips**: Reasonable tips are reimbursable within policy limits (e.g., $2 per bag for baggage handlers, $5 for taxi).
+- **Travel Advances**: Generally not available for students; reimbursements are post-travel.
+- **Late Reimbursements**: Must include Department Head memo explaining delay; reimbursements filed more than 90 days late may be denied.
+
+---
+
+## 7. How to Start the Process
+
+- Visit the **NC State Travel Center** website for policies, forms, and instructions:  
+  https://controller.ofa.ncsu.edu/accounts-payable/travel-center/
+- For non-employee student travel, complete and get approval on the **AP104 Non-Employee Travel Authorization form** before travel.
+- Use the **Travel Center in MyPack Portal** to create Travel Authorizations and Travel Reimbursements.
+- For funding support, explore:
+  - Graduate Student Association Travel Awards: https://orgs.ncsu.edu/gsa/funding-opportunities/conference-award/
+  - Office of Undergraduate Research Travel Awards: https://undergradresearch.dasa.ncsu.edu/travel-awards/
+
+---
+
+## Summary of Steps for Student Travel Reimbursement
+
+1. **Before Travel:**
+   - Obtain prior approval and complete Travel Authorization (AP104 for non-employee students).
+   - Submit TA at least 30 days before travel.
+   - Obtain any necessary pre-approvals (e.g., for third-party lodging).
+
+2. **During Travel:**
+   - Collect all required receipts (except meals).
+   - Keep mileage logs if driving.
+   - For international travel, document currency conversions.
+
+3. **After Travel:**
+   - Submit Travel Reimbursement request within 30 days.
+   - Attach all receipts and approved AP104 form.
+   - Submit to your department or through the Travel Center.
+   - If using travel awards, submit reimbursement paperwork to the awarding office or your department.
+
+4. **Receive Reimbursement:**
+   - Reimbursement is typically via direct deposit.
+   - Timing depends on department processing.
+
+---
+
+If you need detailed instructions or forms, contact your department’s business office or the University Controller’s Office Travel Center. For specific college or department procedures (e.g., CALS, CNR, MAE), check their internal travel resources as they may have additional guidance.
+
+---
+
+**In conclusion, to get reimbursement for your travel expenses as a student at NC State University, you must:**
+
+- Obtain prior travel authorization (AP104 form for non-employees/students).
+- Follow university travel policies and collect required documentation.
+- Submit a travel reimbursement request through the Travel Center or your department within 30 days of travel.
+- If applicable, apply for travel awards through GSA (graduate students) or OUR (undergraduates) to help cover costs, noting these awards reimburse after travel with required documentation.
+
+---
+
+If you want, I can also provide direct links to key forms or resources mentioned above.
+
+==================================================
+SOURCES:
+[1] Travel Center | University Controller's Office (Relevance: 0.700)
+    https://controller.ofa.ncsu.edu/accounts-payable/travel-center/
+    (602 words)
+
+[2] FAQ | Graduate Student Association (Relevance: 0.900)
+    https://orgs.ncsu.edu/gsa/funding-opportunities/conference-award/faq/
+    (2,119 words)
+
+[3] Process: Creating a Travel Reimbursement for Non-Employee ... (Relevance: 0.700)
+    https://chass.ncsu.edu/intranet/wp-content/uploads/sites/6/2023/08/Travel_Reimbursements_for-Non-Employee-Google-Docs.pdf
+    (2,232 words)
+
+[4] Travel Awards (Relevance: 0.900)
+    https://undergradresearch.dasa.ncsu.edu/travel-awards/
+    (1,877 words)
+
+[5] Scholarships | Air Force ROTC (Relevance: 0.500)
+    https://airforce.dasa.ncsu.edu/scholarships/
+    (786 words)
+
+[6] CALS Travel Resources | CALS Business Operations (Relevance: 0.900)
+    https://units.cals.ncsu.edu/business-operations/cals-travel-resources/
+    (4,469 words)
+
+[7] Travel, Shipping, Purchasing and Reimbursement | myMAE (Relevance: 0.850)
+    https://mae.ncsu.edu/mymae/travelpurchasing-and-reimbursement/
+    (3,408 words)
+
+[8] Travel | CNR Internal Resources (Relevance: 0.900)
+    https://cnr.ncsu.edu/internalresources/fer-resources-information/travel/
+    (1,863 words)
+
+[9] Visit NC State Program (Relevance: 0.800)
+    https://grad.ncsu.edu/wp-content/uploads/2015/12/faq-visit-nc-state.pdf
+    (1,324 words)
+
+[10] Travel Documentation Requirements | Business Office (Relevance: 0.800)
+    https://my.csc.ncsu.edu/business-office/common-travel-expenses/
+    (976 words)
+
