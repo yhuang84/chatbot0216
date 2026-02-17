@@ -440,13 +440,16 @@ st.markdown("**💡 Example Questions:**")
 # Define all available example questions
 import random
 example_questions = [
-    "Who to Contact for Help with HPC at NC State University",
-    "Who is doing research on yarn?",
-    "How can I get reimbursement for my travel expenses as a student?",
-    "What is the process for course registration at NCSU?",
-    "What kinds of scholarships are available for students?",
-    "Who got the nsf career award in 2025?",
+    "Who should I contact for help with high-performance computing (HPC) at NC State University?",
+    "Which professors at NC State University conduct research on fiber and textiles?",
+    "How can a student request reimbursement for approved travel expenses?",
+    "What is the course registration process at NC State University?",
+    "What types of scholarships are available to students at NC State University?",
+    "Who received NSF CAREER Awards in 2025?",
+    "What does the Supply Chain Data Science Lab do at NC State University?"
 ]
+
+
 
 # Initialize current example in session state
 if 'current_example' not in st.session_state:
