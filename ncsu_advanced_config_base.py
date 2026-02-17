@@ -580,7 +580,7 @@ def main():
         'top_k': 10,
         'max_pages': 10,
         'relevance_threshold': 0.6,
-        'enable_grading': False,
+        'enable_grading': True,
         'parallel_extraction': True,
         'extraction_workers': 5,
         'parallel_grading': True,
@@ -645,6 +645,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
