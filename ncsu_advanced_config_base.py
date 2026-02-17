@@ -45,7 +45,7 @@ ANSWER_LLM_PROVIDER = 'openai'  # Options: 'openai', 'anthropic', 'mock'
 ANSWER_LLM_MODEL = 'gpt-4o-mini'  # OpenAI: 'gpt-4o', 'gpt-4-turbo' | Anthropic: 'claude-3-sonnet-20240229', 'claude-3-opus-20240229'
 ANSWER_LLM_TEMPERATURE = 0.3
 ANSWER_LLM_MAX_TOKENS = 4000
-MAX_CONTEXT_TOKENS = 120000  # Max tokens for prompt (gpt-4o=128k, leave buffer)
+MAX_CONTEXT_TOKENS = 4000  # Max tokens for prompt (gpt-4o=128k, leave buffer)
 
 # LLM for Content Grading (Speed)
 GRADING_LLM_PROVIDER = 'openai'  # Options: 'openai', 'anthropic', 'mock'
@@ -670,6 +670,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
