@@ -388,7 +388,7 @@ with st.sidebar:
 st.markdown("### 🔍 Search")
 
 query = st.text_area(
-    "",
+    "Search Query",
     value=st.session_state.query,
     height=100,
     placeholder="",
