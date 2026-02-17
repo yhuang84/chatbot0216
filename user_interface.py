@@ -61,6 +61,29 @@ except ImportError as e:
     """)
     st.stop()
 
+# GitHub auto-commit function
+def commit_results_to_github(file_paths, query):
+    """Commit and push result files to GitHub"""
+    try:
+        import subprocess
+        
+        # Add files
+        for file_path in file_paths.values():
+            subprocess.run(['git', 'add', file_path], check=True, capture_output=True)
+        
+        # Commit
+        commit_msg = f"Add research results: {query[:50]}"
+        subprocess.run(['git', 'commit', '-m', commit_msg], check=True, capture_output=True)
+        
+        # Push
+        subprocess.run(['git', 'push'], check=True, capture_output=True)
+        
+        return True, "Successfully committed to GitHub"
+    except subprocess.CalledProcessError as e:
+        return False, f"Git operation failed: {e.stderr.decode() if e.stderr else str(e)}"
+    except Exception as e:
+        return False, f"Git operation failed: {str(e)}"
+
 # Page configuration
 st.set_page_config(
     page_title="NCSU Research Assistant",
@@ -396,40 +419,35 @@ query = st.text_area(
     label_visibility="collapsed"
 )
 
-st.markdown("**💡 Example Queries:**")
+st.markdown("**💡 Example Questions:**")
 
-# Define all available example queries
+# Define all available example questions
 import random
-all_examples = [
-    ("🎓 Graduate Programs", "What are the computer science graduate programs at NCSU?"),
-    ("💰 Financial Aid", "What kinds of scholarships are available for students?"),
-    ("✈️ Travel Reimbursement", "How can I get reimbursement for my travel expenses?"),
-    ("📚 Library Resources", "What research databases are available through NCSU libraries?"),
-    ("🏠 Housing Options", "What on-campus housing options are available for graduate students?"),
-    ("🔬 Research Opportunities", "How can I get involved in undergraduate research at NC State?"),
-    ("📝 Registration", "What is the process for course registration at NCSU?"),
-    ("🎯 Career Services", "What career counseling services does NC State offer?"),
+example_questions = [
+    "Who to Contact for Help with HPC at NC State University",
+    "Who is doing research on yarn?",
+    "How can I get reimbursement for my travel expenses as a student?",
+    "What is the process for course registration at NCSU?",
+    "What kinds of scholarships are available for students?",
+    "Who got the nsf career award in 2025?",
 ]
 
-# Initialize random examples in session state if not exists
-if 'example_queries' not in st.session_state:
-    st.session_state.example_queries = random.sample(all_examples, 3)
+# Initialize current example in session state
+if 'current_example' not in st.session_state:
+    st.session_state.current_example = random.choice(example_questions)
 
-examples_col1, examples_col2, examples_col3 = st.columns(3)
+# Create columns for shuffle button and example question
+col1, col2 = st.columns([1, 5])
 
-with examples_col1:
-    if st.button(st.session_state.example_queries[0][0], use_container_width=True):
-        st.session_state.query = st.session_state.example_queries[0][1]
+with col1:
+    if st.button("🔀 Shuffle", use_container_width=True):
+        st.session_state.current_example = random.choice(example_questions)
         st.rerun()
 
-with examples_col2:
-    if st.button(st.session_state.example_queries[1][0], use_container_width=True):
-        st.session_state.query = st.session_state.example_queries[1][1]
-        st.rerun()
-
-with examples_col3:
-    if st.button(st.session_state.example_queries[2][0], use_container_width=True):
-        st.session_state.query = st.session_state.example_queries[2][1]
+with col2:
+    # Make the question clickable
+    if st.button(f"📝 {st.session_state.current_example}", use_container_width=True, key="example_click"):
+        st.session_state.query = st.session_state.current_example
         st.rerun()
 
 st.markdown("---")
@@ -613,6 +631,14 @@ COMPREHENSIVE ANSWER:"""
         results['final_answer'] = final_answer
         st.session_state.final_answer = final_answer
         saved_files = researcher.save_results(results)
+        
+        # Auto-commit to GitHub
+        with st.spinner("📤 Committing results to GitHub..."):
+            success, message = commit_results_to_github(saved_files, query)
+            if success:
+                st.success(f"✅ {message}")
+            else:
+                st.warning(f"⚠️ {message} (Results saved locally)")
         
         st.session_state.results = results
         st.session_state.saved_files = saved_files
