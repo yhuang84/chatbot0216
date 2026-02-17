@@ -261,6 +261,9 @@ if 'query' not in st.session_state:
 # NEW: store streamed answer so it survives Streamlit reruns
 if 'final_answer' not in st.session_state:
     st.session_state.final_answer = ""
+# Flag to trigger search from example question
+if 'trigger_search' not in st.session_state:
+    st.session_state.trigger_search = False
 
 # Header with NC State logos on both sides
 col1, col2, col3 = st.columns([1, 2, 1])
@@ -440,14 +443,15 @@ if 'current_example' not in st.session_state:
 col1, col2 = st.columns([1, 5])
 
 with col1:
-    if st.button("🔀 Shuffle", use_container_width=True):
+    if st.button("🔀 Shuffle", use_container_width=True, type="secondary"):
         st.session_state.current_example = random.choice(example_questions)
         st.rerun()
 
 with col2:
-    # Make the question clickable
-    if st.button(f"📝 {st.session_state.current_example}", use_container_width=True, key="example_click"):
+    # Make the question clickable - clicking will populate search bar AND trigger search
+    if st.button(f"📝 {st.session_state.current_example}", use_container_width=True, key="example_click", type="secondary"):
         st.session_state.query = st.session_state.current_example
+        st.session_state.trigger_search = True
         st.rerun()
 
 st.markdown("---")
@@ -488,7 +492,10 @@ def _stream_anthropic(prompt, model, max_tokens):
 
 
 # ── Perform research ──────────────────────────────────────────────────────────
-if search_button and query:
+# Trigger search from either button click or example question click
+if (search_button or st.session_state.trigger_search) and query:
+    # Reset trigger flag
+    st.session_state.trigger_search = False
     
     if not os.getenv('OPENAI_API_KEY'):
         st.error("❌ Please enter your OpenAI API key in the sidebar before starting research!")
