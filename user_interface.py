@@ -598,7 +598,7 @@ if ((search_button and bool(query)) or run_from_example) and actual_query:
             
             progress_bar.progress(90)
             percentage_text.markdown("**Progress: 90% — Generating answer...**")
-            status_text.info("💬 Streaming answer word-by-word...")
+            status_text.info("💬 Streaming...")
 
         # ── Stream the answer into the UI ─────────────────────────────────────
         st.markdown("---")
