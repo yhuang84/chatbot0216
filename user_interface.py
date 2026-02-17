@@ -148,6 +148,25 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(204, 0, 0, 0.3);
     }
     
+    /* Green shuffle button - target by content */
+    .stButton button[data-testid="baseButton-primary"] {
+        min-width: 50px !important;
+    }
+    
+    /* Make shuffle button green and square */
+    div[data-testid="column"]:first-child .stButton>button {
+        background-color: #28a745 !important;
+        min-width: 50px !important;
+        max-width: 70px !important;
+        height: 50px !important;
+        padding: 0.5rem !important;
+        font-size: 1.5em !important;
+    }
+    
+    div[data-testid="column"]:first-child .stButton>button:hover {
+        background-color: #218838 !important;
+    }
+    
     /* Input fields */
     .stTextInput>div>div>input,
     .stTextArea>div>div>textarea,
@@ -264,6 +283,9 @@ if 'final_answer' not in st.session_state:
 # Flag to trigger search from example question
 if 'trigger_search' not in st.session_state:
     st.session_state.trigger_search = False
+# Store the example question to search (overrides search bar)
+if 'example_to_search' not in st.session_state:
+    st.session_state.example_to_search = None
 
 # Header with NC State logos on both sides
 col1, col2, col3 = st.columns([1, 2, 1])
@@ -440,17 +462,17 @@ if 'current_example' not in st.session_state:
     st.session_state.current_example = random.choice(example_questions)
 
 # Create columns for shuffle button and example question
-col1, col2 = st.columns([1, 5])
+col1, col2 = st.columns([0.8, 5.2])
 
 with col1:
-    if st.button("🔀 Shuffle", use_container_width=True, type="secondary"):
+    if st.button("🔀", key="shuffle_btn", type="primary"):
         st.session_state.current_example = random.choice(example_questions)
         st.rerun()
 
 with col2:
-    # Make the question clickable - clicking will populate search bar AND trigger search
+    # Make the question clickable - clicking will search THIS question (ignores search bar)
     if st.button(f"📝 {st.session_state.current_example}", use_container_width=True, key="example_click", type="secondary"):
-        st.session_state.query = st.session_state.current_example
+        st.session_state.example_to_search = st.session_state.current_example
         st.session_state.trigger_search = True
         st.rerun()
 
@@ -492,10 +514,16 @@ def _stream_anthropic(prompt, model, max_tokens):
 
 
 # ── Perform research ──────────────────────────────────────────────────────────
-# Trigger search from either button click or example question click
-if (search_button or st.session_state.trigger_search) and query:
-    # Reset trigger flag
+# Determine which query to use: example question overrides search bar
+actual_query = query
+if st.session_state.trigger_search and st.session_state.example_to_search:
+    actual_query = st.session_state.example_to_search
+    # Reset flags
     st.session_state.trigger_search = False
+    st.session_state.example_to_search = None
+
+# Trigger search from either button click or example question click
+if (search_button and query) or (st.session_state.trigger_search and actual_query):
     
     if not os.getenv('OPENAI_API_KEY'):
         st.error("❌ Please enter your OpenAI API key in the sidebar before starting research!")
@@ -516,7 +544,7 @@ if (search_button or st.session_state.trigger_search) and query:
             extraction_status.success(f"✅ {title} ({word_count:,} words)")
     
     config = {
-        'query': query,
+        'query': actual_query,
         'llm_provider': llm_provider,
         'llm_model': llm_model,
         'llm_temperature': llm_temperature,
@@ -566,7 +594,7 @@ if (search_button or st.session_state.trigger_search) and query:
             status_text.info("📄 Extracting content from pages...")
         
         # Run research with live status updates (callback shows pages as they're extracted)
-        results = researcher.research(query)
+        results = researcher.research(actual_query)
         
         with progress_container:
             progress_bar.progress(80)
@@ -590,7 +618,7 @@ if (search_button or st.session_state.trigger_search) and query:
         ])
         prompt = f"""You are an expert research assistant. Based on the NCSU website content provided below, answer the user's question comprehensively and accurately.
 
-USER QUESTION: {query}
+USER QUESTION: {actual_query}
 
 NCSU WEBSITE CONTENT:
 {sources_text}
@@ -641,7 +669,7 @@ COMPREHENSIVE ANSWER:"""
         
         # Auto-commit to GitHub
         with st.spinner("📤 Committing results to GitHub..."):
-            success, message = commit_results_to_github(saved_files, query)
+            success, message = commit_results_to_github(saved_files, actual_query)
             if success:
                 st.success(f"✅ {message}")
             else:
