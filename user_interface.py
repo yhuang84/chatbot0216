@@ -148,13 +148,8 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(204, 0, 0, 0.3);
     }
     
-    /* Green shuffle button - target by content */
-    .stButton button[data-testid="baseButton-primary"] {
-        min-width: 50px !important;
-    }
-    
-    /* Make shuffle button green and square */
-    div[data-testid="column"]:first-child .stButton>button {
+    /* Make the shuffle button green and square */
+    .st-key-shuffle_btn .stButton>button {
         background-color: #28a745 !important;
         min-width: 50px !important;
         max-width: 70px !important;
@@ -163,7 +158,7 @@ st.markdown("""
         font-size: 1.5em !important;
     }
     
-    div[data-testid="column"]:first-child .stButton>button:hover {
+    .st-key-shuffle_btn .stButton>button:hover {
         background-color: #218838 !important;
     }
     
@@ -515,15 +510,14 @@ def _stream_anthropic(prompt, model, max_tokens):
 
 # ── Perform research ──────────────────────────────────────────────────────────
 # Determine which query to use: example question overrides search bar
-actual_query = query
-if st.session_state.trigger_search and st.session_state.example_to_search:
-    actual_query = st.session_state.example_to_search
-    # Reset flags
-    st.session_state.trigger_search = False
-    st.session_state.example_to_search = None
+run_from_example = bool(st.session_state.trigger_search and st.session_state.example_to_search)
+actual_query = st.session_state.example_to_search if run_from_example else query
 
 # Trigger search from either button click or example question click
-if (search_button and query) or (st.session_state.trigger_search and actual_query):
+if ((search_button and bool(query)) or run_from_example) and actual_query:
+    # Reset flags only after we decide to run
+    st.session_state.trigger_search = False
+    st.session_state.example_to_search = None
     
     if not os.getenv('OPENAI_API_KEY'):
         st.error("❌ Please enter your OpenAI API key in the sidebar before starting research!")
