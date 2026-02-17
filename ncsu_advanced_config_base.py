@@ -585,7 +585,7 @@ def main():
         'top_k': 10,
         'max_pages': 5,  # Reduced to 5 to avoid token overflow
         'relevance_threshold': 0.6,
-        'enable_grading': False,
+        'enable_grading': True,
         
         # Performance Optimizations
         'parallel_extraction': True,
@@ -650,5 +650,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
