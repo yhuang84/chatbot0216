@@ -48,7 +48,7 @@ ANSWER_LLM_PROVIDER = 'openai'
 ANSWER_LLM_MODEL = 'gpt-5'
 ANSWER_LLM_TEMPERATURE = 0.3
 ANSWER_LLM_MAX_TOKENS = 4000
-MAX_CONTEXT_TOKENS = 120000
+MAX_CONTEXT_TOKENS = 4000
 
 GRADING_LLM_PROVIDER = 'openai'
 GRADING_LLM_MODEL = 'gpt-5'
@@ -578,7 +578,7 @@ def main():
         'grading_max_tokens': GRADING_LLM_MAX_TOKENS,
         'max_grading_content_length': MAX_GRADING_CONTENT_LENGTH,
         'top_k': 10,
-        'max_pages': 5,
+        'max_pages': 10,
         'relevance_threshold': 0.6,
         'enable_grading': False,
         'parallel_extraction': True,
@@ -588,7 +588,7 @@ def main():
         'enable_caching': True,
         'enable_early_stopping': True,
         'early_stop_threshold': 0.85,
-        'early_stop_min_pages': 3,
+        'early_stop_min_pages': 5,
         'selenium_enabled': True,
         'enhanced_extraction': True,
         'timeout': 30,
@@ -645,4 +645,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
