@@ -441,11 +441,9 @@ st.markdown("**💡 Example Questions:**")
 import random
 example_questions = [
     "Who should I contact for help with high-performance computing (HPC) at NC State University?",
-    "Which professors at NC State University conduct research on fiber and textiles?",
     "How can a student request reimbursement for approved travel expenses?",
     "What is the course registration process at NC State University?",
     "What types of scholarships are available to students at NC State University?",
-    "Who received NSF CAREER Awards in 2025?",
     "What does the Supply Chain Data Science Lab do at NC State University?"
 ]
 
