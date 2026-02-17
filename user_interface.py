@@ -79,10 +79,9 @@ def commit_results_to_github(file_paths, query):
         subprocess.run(['git', 'push'], check=True, capture_output=True)
         
         return True, "Successfully committed to GitHub"
-    except subprocess.CalledProcessError as e:
-        return False, f"Git operation failed: {e.stderr.decode() if e.stderr else str(e)}"
-    except Exception as e:
-        return False, f"Git operation failed: {str(e)}"
+    except Exception:
+        # Keep UI messages user-friendly; avoid showing raw git errors.
+        return False, "GitHub sync unavailable"
 
 # Page configuration
 st.set_page_config(
@@ -184,16 +183,13 @@ st.markdown("""
         border-left: 4px solid #CC0000;
     }
     
-    /* Answer container - prominent display */
+    /* Answer container: no frame */
     div[data-testid="stMarkdownContainer"] > div:has(h2:first-child) {
-        background: white;
-        padding: 30px;
-        border-radius: 12px;
-        border: 3px solid #CC0000;
-        box-shadow: 0 4px 20px rgba(204, 0, 0, 0.15);
-        margin: 20px 0;
-        font-size: 1.05em;
-        line-height: 1.7;
+        background: transparent;
+        padding: 0;
+        border: none;
+        box-shadow: none;
+        margin: 0;
     }
     
     /* Answer section specific styling */
@@ -512,6 +508,7 @@ def _stream_anthropic(prompt, model, max_tokens):
 # Determine which query to use: example question overrides search bar
 run_from_example = bool(st.session_state.trigger_search and st.session_state.example_to_search)
 actual_query = st.session_state.example_to_search if run_from_example else query
+answer_rendered_this_run = False
 
 # Trigger search from either button click or example question click
 if ((search_button and bool(query)) or run_from_example) and actual_query:
@@ -642,6 +639,7 @@ COMPREHENSIVE ANSWER:"""
 
         # st.write_stream renders each chunk live AND returns the full string
         final_answer = st.write_stream(stream_gen)
+        answer_rendered_this_run = True
 
         # Finish progress
         with progress_container:
@@ -667,7 +665,7 @@ COMPREHENSIVE ANSWER:"""
             if success:
                 st.success(f"✅ {message}")
             else:
-                st.warning(f"⚠️ {message} (Results saved locally)")
+                st.info("Results saved locally.")
         
         st.session_state.results = results
         st.session_state.saved_files = saved_files
@@ -708,7 +706,7 @@ if st.session_state.results and not st.session_state.running:
     results = st.session_state.results
     
     # Re-show the answer on reruns (already streamed, now just markdown)
-    if st.session_state.final_answer and not search_button:
+    if st.session_state.final_answer and not search_button and not answer_rendered_this_run:
         st.markdown("---")
         st.markdown("## 📝 Answer")
         st.markdown(st.session_state.final_answer)
