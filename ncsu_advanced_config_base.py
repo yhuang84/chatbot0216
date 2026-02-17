@@ -45,7 +45,7 @@ from utils.logger import setup_logger
 # ========================================
 
 ANSWER_LLM_PROVIDER = 'openai'
-ANSWER_LLM_MODEL = 'gpt-4o'        # Fixed from gpt-5.2
+ANSWER_LLM_MODEL = 'gpt-4o-mini'        # Fixed from gpt-5.2
 ANSWER_LLM_TEMPERATURE = 0.1
 ANSWER_LLM_MAX_TOKENS = 8000       # Increased from 4000
 MAX_CONTEXT_TOKENS = 120000
@@ -616,8 +616,8 @@ def main():
 
         # Search & extraction
         'top_k': 20,
-        'max_pages': 10,
-        'relevance_threshold': 0.2,
+        'max_pages': 20,
+        'relevance_threshold': 0.1,
 
         # Grading ON so pages are actually filtered meaningfully
         'enable_grading': True,
