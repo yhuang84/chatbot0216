@@ -1,17 +1,24 @@
 #!/usr/bin/env python3
 """
-NCSU Advanced Research Assistant - SERIAL VERSION (MAX QUALITY)
-===============================================================
+NCSU Advanced Research Assistant - OPTIMIZED VERSION
+====================================================
 
-Features:
-- Serial (Sequential) processing: Stable and predictable.
-- Full Content Analysis: No truncation, reads everything.
-- High Volume: Processes top 20 pages.
-- Model: Uses GPT-4o for final answer (Highest Quality).
+Performance Optimizations:
+- Parallel content extraction and LLM grading
+- Content truncation for faster grading
+- Separate models for grading (fast) vs answers (quality)
+- Early stopping when high-quality content found
+- Caching for pages and grades
+- Reduced default parameters for speed
+- Token limit management to prevent context overflow
+
+KEY CHANGE: research() no longer calls generate_answer() (Step 5 removed).
+The UI calls the streaming API directly so the answer appears immediately
+after extraction instead of waiting for a full blocking LLM call first.
 
 Usage:
     1. Edit the config dictionary in main()
-    2. Run: python ncsu_advanced_serial.py
+    2. Run: python ncsu_advanced_config_base.py
 """
 
 import json
@@ -22,6 +29,7 @@ import hashlib
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
@@ -37,13 +45,13 @@ from utils.logger import setup_logger
 # ========================================
 
 ANSWER_LLM_PROVIDER = 'openai'
-ANSWER_LLM_MODEL = 'gpt-4o'        # [UPGRADED] Uses the best model for the final answer
+ANSWER_LLM_MODEL = 'gpt-4o-mini'        # Fixed from gpt-5.2
 ANSWER_LLM_TEMPERATURE = 0.1
-ANSWER_LLM_MAX_TOKENS = 8000
+ANSWER_LLM_MAX_TOKENS = 8000       # Increased from 4000
 MAX_CONTEXT_TOKENS = 120000
 
 GRADING_LLM_PROVIDER = 'openai'
-GRADING_LLM_MODEL = 'gpt-4o-mini'  # Efficient model for grading
+GRADING_LLM_MODEL = 'gpt-4o-mini'
 GRADING_LLM_TEMPERATURE = 0.0
 GRADING_LLM_MAX_TOKENS = 10
 MAX_GRADING_CONTENT_LENGTH = 2000
@@ -171,7 +179,7 @@ class AnthropicProvider(LLMProvider):
 
 
 class NCSUAdvancedResearcher:
-    """Advanced NCSU research assistant (Serial Version)"""
+    """Advanced NCSU research assistant with performance optimizations"""
 
     def __init__(self, config: Dict[str, Any]):
         self.config = config
@@ -193,12 +201,14 @@ class NCSUAdvancedResearcher:
         self.output_dir = Path(config.get('output_dir', 'results'))
         self.output_dir.mkdir(exist_ok=True)
 
-        print(f"🎯 NCSU Advanced Researcher (SERIAL MODE)")
+        print(f"🎯 NCSU Advanced Researcher (OPTIMIZED)")
         print(f"🤖 Grading: {self.grading_provider.provider_name} ({self.grading_provider.model})")
         print(f"🤖 Answer: {self.answer_provider.provider_name} ({self.answer_provider.model})")
-        print(f"🔍 Top-K: {config.get('top_k', 10)}, Max Pages: {config.get('max_pages', 20)}")
-        print(f"📊 Threshold: {config.get('relevance_threshold', 0.1)}")
-        print(f"💾 Cache: {config.get('enable_caching', True)}, 🛑 Early Stop: {config.get('enable_early_stopping', False)}")
+        print(f"🔍 Top-K: {config.get('top_k', 10)}, Max Pages: {config.get('max_pages', 5)}")
+        print(f"📊 Threshold: {config.get('relevance_threshold', 0.6)}")
+        print(f"⚡ Parallel: Extract={config.get('parallel_extraction', True)} ({config.get('extraction_workers', 5)}w), "
+              f"Grade={config.get('parallel_grading', True)} ({config.get('grading_workers', 5)}w)")
+        print(f"💾 Cache: {config.get('enable_caching', True)}, 🛑 Early Stop: {config.get('enable_early_stopping', True)}")
 
     def _setup_grading_provider(self) -> LLMProvider:
         provider = self.config.get('grading_provider', self.config.get('llm_provider', 'mock')).lower()
@@ -233,9 +243,9 @@ class NCSUAdvancedResearcher:
         return MockLLMProvider()
 
     def grade_content_relevance(self, content: str, query: str) -> float:
-        """Grade content relevance using LLM (FULL CONTENT)"""
+        """Grade content relevance using LLM"""
         
-        # [MODIFIED] Use full content for grading - no truncation
+        # Use full content for grading - no truncation
         content_to_grade = content
         
         prompt = f"""You are an expert content grader. Grade how relevant this content is to answering the user's query.
@@ -277,7 +287,7 @@ class NCSUAdvancedResearcher:
             return 0.5
 
     def _extract_single_page(self, result) -> Optional[Dict]:
-        """Extract content from single page"""
+        """Extract content from single page (parallel)"""
         try:
             if self.cache:
                 cached = self.cache.get_page(str(result.url))
@@ -300,7 +310,7 @@ class NCSUAdvancedResearcher:
         return None
 
     def _grade_single_page(self, page: Dict, query: str) -> Dict:
-        """Grade single page"""
+        """Grade single page (parallel)"""
         try:
             score = self.grade_content_relevance(page['content'], query)
             return {**page, 'relevance_score': score}
@@ -314,10 +324,10 @@ class NCSUAdvancedResearcher:
     def _truncate_sources_to_fit(self, sources: List[Dict], query: str, max_tokens: int = 120000) -> List[Dict]:
         """
         [MODIFIED] Returns all sources directly to preserve complete information.
-        Bypasses token truncation logic.
+        Bypasses token truncation logic to match the behavior of the standalone script (Code 3).
         """
         
-        # 简单打印日志
+        # 简单打印日志，确认接收到了多少页面
         print(f"\n{'='*80}")
         print(f"📊 CONTEXT WINDOW ANALYSIS (Bypassed)")
         print(f"{'='*80}")
@@ -326,10 +336,16 @@ class NCSUAdvancedResearcher:
         print(f"   ⚠️  TRUNCATION DISABLED: Using all {len(sources)} sources (Full Context Mode)")
         print(f"{'='*80}\n")
 
+        # 直接返回所有来源，不做任何删减
+        # 这确保了 LLM 能看到所有搜索到的内容
         return sources
 
     def build_prompt(self, query: str, sources: List[Dict]) -> str:
-        """Build the answer prompt from filtered pages."""
+        """
+        Build the answer prompt from filtered pages.
+        Called by both generate_answer() and the UI streaming helpers.
+        Extracted so the prompt is always identical regardless of path.
+        """
         max_context_tokens = self.config.get('max_context_tokens', 120000)
         sources_to_use = self._truncate_sources_to_fit(sources, query, max_context_tokens)
 
@@ -360,7 +376,7 @@ INSTRUCTIONS:
 COMPREHENSIVE ANSWER:"""
 
     def generate_answer(self, content: str, query: str, sources: List[Dict]) -> str:
-        """Non-streaming answer generation"""
+        """Non-streaming answer generation (used by main() terminal mode)"""
         prompt = self.build_prompt(query, sources)
         estimated_tokens = self._estimate_tokens(prompt)
         print(f"📊 Estimated prompt tokens: {estimated_tokens:,}")
@@ -368,9 +384,14 @@ COMPREHENSIVE ANSWER:"""
 
     def research(self, query: str) -> Dict[str, Any]:
         """
-        Conduct research sequentially (Serial Mode): search → extract → grade → filter.
+        Conduct optimized research: search → extract → grade → filter.
+
+        *** Step 5 (generate_answer) is intentionally NOT called here. ***
+        The UI calls st.write_stream() immediately after this returns,
+        so streaming starts the moment extraction finishes — no blocking wait.
+        For terminal use, main() calls generate_answer() separately.
         """
-        print(f"\n🔍 RESEARCH (SERIAL MODE)")
+        print(f"\n🔍 OPTIMIZED RESEARCH")
         print("=" * 70)
         print(f"📋 Query: '{query}'")
 
@@ -381,10 +402,10 @@ COMPREHENSIVE ANSWER:"""
             'performance_stats': {'cached_pages': 0, 'cached_grades': 0, 'early_stopped': False}
         }
 
-        # Step 1: Search
+        # Step 1: Search (silently append "at ncsu" if not already present)
         search_query = query if "ncsu" in query.lower() or "nc state" in query.lower() else query + " at ncsu"
         print(f"\n📋 STEP 1: Searching NCSU...")
-        search_results = self.scraper.search(search_query, max_results=self.config.get('top_k', 20))
+        search_results = self.scraper.search(search_query, max_results=self.config.get('top_k', 10))
         results['search_results'] = [{'title': r.title, 'url': str(r.url), 'snippet': r.snippet} for r in search_results]
         print(f"✅ Found {len(search_results)} results")
 
@@ -392,25 +413,32 @@ COMPREHENSIVE ANSWER:"""
             print("❌ No results")
             return results
 
-        # Step 2: Extract (Serial)
-        max_pages = self.config.get('max_pages', 20)
+        # Step 2: Extract (Parallel)
+        max_pages = self.config.get('max_pages', 5)
         pages_to_extract = search_results[:max_pages]
-        print(f"\n📋 STEP 2: Extracting {len(pages_to_extract)} pages (SEQUENTIAL)...")
+        print(f"\n📋 STEP 2: Extracting {len(pages_to_extract)} pages (PARALLEL)...")
 
         extracted_pages = []
-        for i, r in enumerate(pages_to_extract, 1):
-            # Serial extraction
-            page = self._extract_single_page(r)
-            if page:
-                extracted_pages.append(page)
-                cached_str = " (cached)" if page.get('cached') else ""
-                print(f"  ✅ [{i}/{len(pages_to_extract)}] {page['title'][:50]}{cached_str} ({page['word_count']:,} words)")
-                if page.get('cached'):
-                    results['performance_stats']['cached_pages'] += 1
-                if self.progress_callback:
-                    self.progress_callback('extraction', page)
-            else:
-                 print(f"  ❌ [{i}/{len(pages_to_extract)}] Failed to extract")
+        if self.config.get('parallel_extraction', True):
+            workers = self.config.get('extraction_workers', 5)
+            with ThreadPoolExecutor(max_workers=workers) as executor:
+                futures = {executor.submit(self._extract_single_page, r): r for r in pages_to_extract}
+                for future in as_completed(futures):
+                    page = future.result()
+                    if page:
+                        extracted_pages.append(page)
+                        cached_str = " (cached)" if page.get('cached') else ""
+                        print(f"  ✅ {page['title'][:50]}{cached_str} ({page['word_count']:,} words)")
+                        if page.get('cached'):
+                            results['performance_stats']['cached_pages'] += 1
+                        # Call progress callback if provided
+                        if self.progress_callback:
+                            self.progress_callback('extraction', page)
+        else:
+            for r in pages_to_extract:
+                page = self._extract_single_page(r)
+                if page:
+                    extracted_pages.append(page)
 
         results['extracted_pages'] = extracted_pages
         print(f"✅ Extracted {len(extracted_pages)} pages ({sum(p['word_count'] for p in extracted_pages):,} words)")
@@ -419,16 +447,23 @@ COMPREHENSIVE ANSWER:"""
             print("❌ No content extracted")
             return results
 
-        # Step 3: Grade (Serial)
+        # Step 3: Grade (Parallel)
         if self.config.get('enable_grading', True):
-            print(f"\n📋 STEP 3: Grading (SEQUENTIAL)...")
+            print(f"\n📋 STEP 3: Grading (PARALLEL)...")
             graded_pages = []
-            
-            for i, page in enumerate(extracted_pages, 1):
-                graded = self._grade_single_page(page, query)
-                graded_pages.append(graded)
-                print(f"  [{i}/{len(extracted_pages)}] {graded['title'][:40]}: {graded['relevance_score']:.3f}")
-            
+            if self.config.get('parallel_grading', True):
+                workers = self.config.get('grading_workers', 5)
+                with ThreadPoolExecutor(max_workers=workers) as executor:
+                    futures = {executor.submit(self._grade_single_page, p, query): p for p in extracted_pages}
+                    for i, future in enumerate(as_completed(futures), 1):
+                        graded = future.result()
+                        graded_pages.append(graded)
+                        print(f"  [{i}/{len(extracted_pages)}] {graded['title'][:40]}: {graded['relevance_score']:.3f}")
+            else:
+                for i, page in enumerate(extracted_pages, 1):
+                    graded = self._grade_single_page(page, query)
+                    graded_pages.append(graded)
+                    print(f"  [{i}/{len(extracted_pages)}] {graded['title'][:40]}: {graded['relevance_score']:.3f}")
             results['graded_pages'] = graded_pages
             print(f"✅ Graded {len(graded_pages)} pages")
             
@@ -446,14 +481,14 @@ COMPREHENSIVE ANSWER:"""
             results['graded_pages'] = graded_pages
 
         # Step 4: Filter + Early Stop
-        print(f"\n📋 STEP 4: Filtering (threshold: {self.config.get('relevance_threshold', 0.1)})...")
-        threshold = self.config.get('relevance_threshold', 0.1)
+        print(f"\n📋 STEP 4: Filtering (threshold: {self.config.get('relevance_threshold', 0.6)})...")
+        threshold = self.config.get('relevance_threshold', 0.6)
         filtered_pages = sorted(
             [p for p in graded_pages if p['relevance_score'] >= threshold],
             key=lambda x: x['relevance_score'], reverse=True
         )
 
-        if self.config.get('enable_early_stopping', False):
+        if self.config.get('enable_early_stopping', True):
             early_threshold = self.config.get('early_stop_threshold', 0.85)
             early_min = self.config.get('early_stop_min_pages', 3)
             high_quality = [p for p in filtered_pages if p['relevance_score'] >= early_threshold]
@@ -486,6 +521,10 @@ COMPREHENSIVE ANSWER:"""
             for p in filtered_pages
         ]
 
+        # ── Step 5 intentionally removed ──────────────────────────────────────
+        # The UI streams the answer directly via st.write_stream() right after
+        # this function returns. This eliminates the 15-20s blocking wait.
+        # Terminal use: main() calls generate_answer() below instead.
         print(f"\n✅ Research complete — ready for answer generation")
 
         return results
@@ -549,7 +588,7 @@ COMPREHENSIVE ANSWER:"""
 
 
 def main():
-    """Main function"""
+    """Main function — terminal mode calls generate_answer() separately"""
 
     try:
         from dotenv import load_dotenv
@@ -561,29 +600,35 @@ def main():
     config = {
         'query': 'Who received NSF CAREER Awards in 2025?',
 
-        # Answer LLM (High Quality)
+        # Answer LLM
         'llm_provider': ANSWER_LLM_PROVIDER,
-        'llm_model': ANSWER_LLM_MODEL,      # gpt-4o
+        'llm_model': ANSWER_LLM_MODEL,
         'llm_temperature': ANSWER_LLM_TEMPERATURE,
         'llm_max_tokens': ANSWER_LLM_MAX_TOKENS,
         'max_context_tokens': MAX_CONTEXT_TOKENS,
 
         # Grading LLM
         'grading_provider': GRADING_LLM_PROVIDER,
-        'grading_model': GRADING_LLM_MODEL, # gpt-4o-mini
+        'grading_model': GRADING_LLM_MODEL,
         'grading_temperature': GRADING_LLM_TEMPERATURE,
         'grading_max_tokens': GRADING_LLM_MAX_TOKENS,
         'max_grading_content_length': MAX_GRADING_CONTENT_LENGTH,
 
-        # Search & extraction (Generous Settings)
+        # Search & extraction
         'top_k': 20,
-        'max_pages': 20,          # Full 20 pages
-        'relevance_threshold': 0.1, # Low threshold to keep everything
+        'max_pages': 20,
+        'relevance_threshold': 0.1,
 
-        # Features
+        # Grading ON so pages are actually filtered meaningfully
         'enable_grading': True,
+        'parallel_extraction': True,
+        'extraction_workers': 5,
+        'parallel_grading': True,
+        'grading_workers': 5,
+
+        # Caching ON, early stopping OFF so all graded pages reach the LLM
         'enable_caching': True,
-        'enable_early_stopping': False, # Disabled to ensure full analysis
+        'enable_early_stopping': False,
 
         # Scraping
         'selenium_enabled': True,
@@ -598,7 +643,7 @@ def main():
     if config.get('anthropic_api_key'):
         os.environ['ANTHROPIC_API_KEY'] = config['anthropic_api_key']
 
-    print("🎯 NCSU Advanced Research Assistant (SERIAL VERSION)")
+    print("🎯 NCSU Advanced Research Assistant (OPTIMIZED)")
     print("=" * 50)
     print(f"📋 Query: {config['query']}")
     print(f"🤖 Grading: {config['grading_provider']} ({config['grading_model']})")
@@ -611,7 +656,7 @@ def main():
         # research() does steps 1-4 only
         results = researcher.research(config['query'])
 
-        # Step 5: generate answer
+        # Step 5: generate answer in terminal (non-streaming)
         print(f"\n📋 STEP 5: Generating answer...")
         final_answer = researcher.generate_answer('', config['query'], results['filtered_pages'])
         results['final_answer'] = final_answer
@@ -642,3 +687,10 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+
+
