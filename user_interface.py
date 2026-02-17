@@ -28,7 +28,7 @@ except (KeyError, FileNotFoundError, AttributeError):
 
 # Import researcher
 try:
-    from ncsu_advanced_config_base_optimized import NCSUAdvancedResearcher
+    from ncsu_advanced_config_base import NCSUAdvancedResearcher
 except ImportError as e:
     st.error(f"""
     ❌ **Import Error:** Cannot import NCSUAdvancedResearcher
