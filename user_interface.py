@@ -342,7 +342,7 @@ with st.sidebar:
     
     llm_model = st.text_input(
         "Model",
-        value="gpt-4.1-mini" if llm_provider == "openai" else "claude-3-sonnet-20240229"
+        value="gpt-4o" if llm_provider == "openai" else "claude-3-sonnet-20240229"
     )
     
     llm_temperature = st.slider(
@@ -441,7 +441,7 @@ st.markdown("**💡 Example Questions:**")
 import random
 example_questions = [
     "Who should I contact for help with high-performance computing (HPC) at NC State University?",
-    "Which professors at NC State University conduct research on yarn?",
+    "Who is doing research on yarn?",
     "How can a student request reimbursement for approved travel expenses?",
     "What is the course registration process at NC State University?",
     "What types of scholarships are available to students at NC State University?",

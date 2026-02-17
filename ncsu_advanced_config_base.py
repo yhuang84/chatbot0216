@@ -570,8 +570,8 @@ def main():
         
         # Search & Content
         'top_k': 20,
-        'max_pages': 15,
-        'relevance_threshold': 0.3,
+        'max_pages': 20,
+        'relevance_threshold': 0.1,
         'enable_grading': True,
         
         # Performance
