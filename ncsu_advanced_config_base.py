@@ -243,39 +243,54 @@ class NCSUAdvancedResearcher:
         return MockLLMProvider()
 
     def grade_content_relevance(self, content: str, query: str) -> float:
-        """Grade content relevance with caching and truncation"""
-        if self.cache:
-            cached = self.cache.get_grade(content, query)
-            if cached is not None:
-                return cached
+    """Grade content relevance using LLM"""
+    if self.cache:
+        cached = self.cache.get_grade(content, query)
+        if cached is not None:
+            return cached
+    
+    # ✅ Use full content for grading - no truncation (like old version)
+    content_to_grade = content
+    
+    # ✅ Restore the detailed grading prompt from old version
+    prompt = f"""You are an expert content grader. Grade how relevant this content is to answering the user's query.
 
-        max_chars = self.config.get('max_grading_content_length', 2000)
-        content_truncated = content[:max_chars]
+USER QUERY: {query}
 
-        prompt = f"""Grade relevance of content to query (0.0-1.0):
+CONTENT TO GRADE:
+{content_to_grade}
 
-QUERY: {query}
+GRADING INSTRUCTIONS:
+- Analyze the entire content thoroughly
+- Consider how well the content answers or relates to the query
+- Ignore navigation menus, headers, and boilerplate text
+- Focus on the substantive information that addresses the query
+- Consider information quality, accuracy, and completeness
 
-CONTENT:
-{content_truncated}
+SCORING SCALE:
+- 1.0 = Perfect match - content directly and comprehensively answers the query
+- 0.8-0.9 = Highly relevant - content strongly relates and provides good information
+- 0.6-0.7 = Moderately relevant - content relates but may be incomplete or tangential
+- 0.4-0.5 = Somewhat relevant - content has some connection but limited usefulness
+- 0.2-0.3 = Minimally relevant - content barely relates to the query
+- 0.0-0.1 = Irrelevant - content does not relate to the query
 
-Scale: 1.0=Perfect, 0.8-0.9=Highly relevant, 0.6-0.7=Moderate, 0.4-0.5=Somewhat, 0.2-0.3=Minimal, 0.0-0.1=Irrelevant
-
-Return ONLY a number (e.g., 0.85):"""
-
-        try:
-            response = self.grading_provider.generate_response(prompt)
-            import re
-            match = re.search(r'(\d+\.?\d*)', response)
-            if match:
-                score = max(0.0, min(1.0, float(match.group(1))))
-                if self.cache:
-                    self.cache.set_grade(content, query, score)
-                return score
-            return 0.5
-        except Exception as e:
-            self.logger.warning(f"Grading error: {e}")
-            return 0.5
+Return ONLY a decimal number between 0.0 and 1.0 (e.g., 0.85):"""
+    
+    try:
+        # Note: use self.grading_provider (new) not self.llm_provider (old)
+        response = self.grading_provider.generate_response(prompt)
+        import re
+        match = re.search(r'(\d+\.?\d*)', response)
+        if match:
+            score = max(0.0, min(1.0, float(match.group(1))))
+            if self.cache:
+                self.cache.set_grade(content, query, score)
+            return score
+        return 0.5
+    except Exception as e:
+        self.logger.warning(f"Grading error: {e}")
+        return 0.5
 
     def _extract_single_page(self, result) -> Optional[Dict]:
         """Extract content from single page (parallel)"""
@@ -728,6 +743,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
