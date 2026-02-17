@@ -363,7 +363,7 @@ def main():
         
         # 3. Search Settings: "Generous" (High count to ensure coverage)
         'top_k': 30,          # Search 30 results
-        'max_pages': 20,      # Scrape top 20
+        'max_pages': 30,      # Scrape top 20
         'relevance_threshold': 0.1, # Keep almost everything
         
         # 4. Features
