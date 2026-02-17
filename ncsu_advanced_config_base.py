@@ -54,7 +54,7 @@ GRADING_LLM_PROVIDER = 'openai'
 GRADING_LLM_MODEL = 'gpt-4o-mini'
 GRADING_LLM_TEMPERATURE = 0.0
 GRADING_LLM_MAX_TOKENS = 10
-MAX_GRADING_CONTENT_LENGTH = 5000
+MAX_GRADING_CONTENT_LENGTH = 2000
 
 
 class ContentCache:
@@ -728,6 +728,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
