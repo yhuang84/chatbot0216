@@ -479,6 +479,17 @@ if search_button and query:
     st.session_state.running = True
     st.session_state.final_answer = ""  # reset previous answer
     
+    # Create containers for real-time updates
+    progress_container = st.container()
+    extraction_status = st.empty()
+    
+    # Progress callback for real-time extraction updates
+    def progress_callback(event_type, data):
+        if event_type == 'extraction':
+            title = data['title'][:50]  # Truncate long titles
+            word_count = data['word_count']
+            extraction_status.success(f"✅ {title} ({word_count:,} words)")
+    
     config = {
         'query': query,
         'llm_provider': llm_provider,
@@ -494,11 +505,9 @@ if search_button and query:
         'min_content_length': min_content_length,
         'max_content_length': max_content_length,
         'output_dir': 'results',
-        'timeout': timeout
+        'timeout': timeout,
+        'progress_callback': progress_callback
     }
-    
-    progress_container = st.container()
-    extraction_status = st.empty()
     
     try:
         with progress_container:
@@ -531,16 +540,8 @@ if search_button and query:
             percentage_text.markdown("**Progress: 50%**")
             status_text.info("📄 Extracting content from pages...")
         
-        # Run research with live status updates
+        # Run research with live status updates (callback shows pages as they're extracted)
         results = researcher.research(query)
-        
-        # Show extraction results
-        if results.get('extracted_pages'):
-            extraction_messages = []
-            for page in results['extracted_pages']:
-                extraction_messages.append(f"✅ {page['title']} ({page['word_count']:,} words)")
-            extraction_status.success("\n\n".join(extraction_messages))
-            time.sleep(1.5)
         
         with progress_container:
             progress_bar.progress(80)
