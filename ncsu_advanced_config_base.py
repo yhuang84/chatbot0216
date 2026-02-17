@@ -533,14 +533,20 @@ COMPREHENSIVE ANSWER:"""
             f.write(f"Early stopped: {results['performance_stats']['early_stopped']}\n")
         files['answer'] = str(answer_file)
 
+        # Create a serializable copy of config (remove function objects like progress_callback)
+        config_for_json = {k: v for k, v in results['config'].items() if not callable(v)}
+        results_for_json = {**results, 'config': config_for_json}
+        
         data_file = self.output_dir / f"data_{query_short}_{timestamp}.json"
         with open(data_file, 'w', encoding='utf-8') as f:
-            json.dump(results, f, indent=2, ensure_ascii=False)
+            json.dump(results_for_json, f, indent=2, ensure_ascii=False)
         files['data'] = str(data_file)
 
+        # Also filter out callables from YAML config
+        config_for_yaml = {k: v for k, v in results['config'].items() if not callable(v)}
         config_file = self.output_dir / f"config_{query_short}_{timestamp}.yaml"
         with open(config_file, 'w', encoding='utf-8') as f:
-            yaml.dump(results['config'], f, default_flow_style=False)
+            yaml.dump(config_for_yaml, f, default_flow_style=False)
         files['config'] = str(config_file)
 
         return files
