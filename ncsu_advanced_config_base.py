@@ -243,17 +243,17 @@ class NCSUAdvancedResearcher:
         return MockLLMProvider()
 
     def grade_content_relevance(self, content: str, query: str) -> float:
-    """Grade content relevance using LLM"""
-    if self.cache:
-        cached = self.cache.get_grade(content, query)
-        if cached is not None:
-            return cached
-    
-    # ✅ Use full content for grading - no truncation (like old version)
-    content_to_grade = content
-    
-    # ✅ Restore the detailed grading prompt from old version
-    prompt = f"""You are an expert content grader. Grade how relevant this content is to answering the user's query.
+        """Grade content relevance using LLM"""
+        if self.cache:
+            cached = self.cache.get_grade(content, query)
+            if cached is not None:
+                return cached
+        
+        # ✅ Use full content for grading - no truncation (like old version)
+        content_to_grade = content
+        
+        # ✅ Restore the detailed grading prompt from old version
+        prompt = f"""You are an expert content grader. Grade how relevant this content is to answering the user's query.
 
 USER QUERY: {query}
 
@@ -276,21 +276,21 @@ SCORING SCALE:
 - 0.0-0.1 = Irrelevant - content does not relate to the query
 
 Return ONLY a decimal number between 0.0 and 1.0 (e.g., 0.85):"""
-    
-    try:
-        # Note: use self.grading_provider (new) not self.llm_provider (old)
-        response = self.grading_provider.generate_response(prompt)
-        import re
-        match = re.search(r'(\d+\.?\d*)', response)
-        if match:
-            score = max(0.0, min(1.0, float(match.group(1))))
-            if self.cache:
-                self.cache.set_grade(content, query, score)
-            return score
-        return 0.5
-    except Exception as e:
-        self.logger.warning(f"Grading error: {e}")
-        return 0.5
+        
+        try:
+            # Note: use self.grading_provider (new) not self.llm_provider (old)
+            response = self.grading_provider.generate_response(prompt)
+            import re
+            match = re.search(r'(\d+\.?\d*)', response)
+            if match:
+                score = max(0.0, min(1.0, float(match.group(1))))
+                if self.cache:
+                    self.cache.set_grade(content, query, score)
+                return score
+            return 0.5
+        except Exception as e:
+            self.logger.warning(f"Grading error: {e}")
+            return 0.5
 
     def _extract_single_page(self, result) -> Optional[Dict]:
         """Extract content from single page (parallel)"""
@@ -743,6 +743,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
