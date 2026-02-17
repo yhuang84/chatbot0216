@@ -45,14 +45,14 @@ from utils.logger import setup_logger
 # ========================================
 
 ANSWER_LLM_PROVIDER = 'openai'
-ANSWER_LLM_MODEL = 'gpt-5-mini'
-ANSWER_LLM_TEMPERATURE = 0.3
+ANSWER_LLM_MODEL = 'gpt-4o-mini'        # gpt-5-mini does not exist — use gpt-4o or gpt-4o-mini
+ANSWER_LLM_TEMPERATURE = 0.1            # lower = more factual, less hallucination
 ANSWER_LLM_MAX_TOKENS = 4000
-MAX_CONTEXT_TOKENS = 4000
+MAX_CONTEXT_TOKENS = 120000             # CRITICAL: was 4000 → model received almost NO source content
 
 GRADING_LLM_PROVIDER = 'openai'
-GRADING_LLM_MODEL = 'gpt-5-mini'
-GRADING_LLM_TEMPERATURE = 0.3
+GRADING_LLM_MODEL = 'gpt-4o-mini'      # gpt-5-mini does not exist
+GRADING_LLM_TEMPERATURE = 0.0          # grading should be fully deterministic
 GRADING_LLM_MAX_TOKENS = 10
 MAX_GRADING_CONTENT_LENGTH = 2000
 
@@ -402,9 +402,10 @@ COMPREHENSIVE ANSWER:"""
             'performance_stats': {'cached_pages': 0, 'cached_grades': 0, 'early_stopped': False}
         }
 
-        # Step 1: Search
+        # Step 1: Search (silently append "at ncsu" if not already present)
+        search_query = query if "ncsu" in query.lower() or "nc state" in query.lower() else query + " at ncsu"
         print(f"\n📋 STEP 1: Searching NCSU...")
-        search_results = self.scraper.search(query, max_results=self.config.get('top_k', 10))
+        search_results = self.scraper.search(search_query, max_results=self.config.get('top_k', 10))
         results['search_results'] = [{'title': r.title, 'url': str(r.url), 'snippet': r.snippet} for r in search_results]
         print(f"✅ Found {len(search_results)} results")
 
@@ -567,28 +568,38 @@ def main():
 
     config = {
         'query': 'What are the requirements for the Computer Science major at NC State University?',
+
+        # Answer LLM
         'llm_provider': ANSWER_LLM_PROVIDER,
         'llm_model': ANSWER_LLM_MODEL,
         'llm_temperature': ANSWER_LLM_TEMPERATURE,
         'llm_max_tokens': ANSWER_LLM_MAX_TOKENS,
-        'max_context_tokens': MAX_CONTEXT_TOKENS,
+        'max_context_tokens': MAX_CONTEXT_TOKENS,   # 120000 — sends full content to model
+
+        # Grading LLM
         'grading_provider': GRADING_LLM_PROVIDER,
         'grading_model': GRADING_LLM_MODEL,
         'grading_temperature': GRADING_LLM_TEMPERATURE,
         'grading_max_tokens': GRADING_LLM_MAX_TOKENS,
         'max_grading_content_length': MAX_GRADING_CONTENT_LENGTH,
+
+        # Search & extraction
         'top_k': 10,
         'max_pages': 10,
-        'relevance_threshold': 0.6,
+        'relevance_threshold': 0.3,         # lowered: don't discard borderline pages
+
+        # Grading ON so pages are actually filtered meaningfully
         'enable_grading': True,
         'parallel_extraction': True,
         'extraction_workers': 5,
         'parallel_grading': True,
         'grading_workers': 5,
+
+        # Caching ON, early stopping OFF so all graded pages reach the LLM
         'enable_caching': True,
-        'enable_early_stopping': True,
-        'early_stop_threshold': 0.85,
-        'early_stop_min_pages': 5,
+        'enable_early_stopping': False,
+
+        # Scraping
         'selenium_enabled': True,
         'enhanced_extraction': True,
         'timeout': 30,
@@ -645,7 +656,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
