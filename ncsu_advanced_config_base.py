@@ -45,13 +45,13 @@ from utils.logger import setup_logger
 # ========================================
 
 ANSWER_LLM_PROVIDER = 'openai'
-ANSWER_LLM_MODEL = 'gpt-5'
+ANSWER_LLM_MODEL = 'gpt-5-mini'
 ANSWER_LLM_TEMPERATURE = 0.3
 ANSWER_LLM_MAX_TOKENS = 4000
 MAX_CONTEXT_TOKENS = 4000
 
 GRADING_LLM_PROVIDER = 'openai'
-GRADING_LLM_MODEL = 'gpt-5'
+GRADING_LLM_MODEL = 'gpt-5-mini'
 GRADING_LLM_TEMPERATURE = 0.3
 GRADING_LLM_MAX_TOKENS = 10
 MAX_GRADING_CONTENT_LENGTH = 2000
@@ -645,5 +645,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
