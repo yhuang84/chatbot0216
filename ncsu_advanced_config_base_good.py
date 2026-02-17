@@ -243,34 +243,25 @@ class NCSUAdvancedResearcher:
         return MockLLMProvider()
 
     def grade_content_relevance(self, content: str, query: str) -> float:
-        """Grade content relevance using LLM"""
-        
-        # Use full content for grading - no truncation
-        content_to_grade = content
-        
-        prompt = f"""You are an expert content grader. Grade how relevant this content is to answering the user's query.
+        """Grade content relevance with caching and truncation"""
+        if self.cache:
+            cached = self.cache.get_grade(content, query)
+            if cached is not None:
+                return cached
 
-        USER QUERY: {query}
+        max_chars = self.config.get('max_grading_content_length', 2000)
+        content_truncated = content[:max_chars]
 
-        CONTENT TO GRADE:
-        {content_to_grade}
+        prompt = f"""Grade relevance of content to query (0.0-1.0):
 
-        GRADING INSTRUCTIONS:
-        - Analyze the entire content thoroughly
-        - Consider how well the content answers or relates to the query
-        - Ignore navigation menus, headers, and boilerplate text
-        - Focus on the substantive information that addresses the query
-        - Consider information quality, accuracy, and completeness
+QUERY: {query}
 
-        SCORING SCALE:
-        - 1.0 = Perfect match - content directly and comprehensively answers the query
-        - 0.8-0.9 = Highly relevant - content strongly relates and provides good information
-        - 0.6-0.7 = Moderately relevant - content relates but may be incomplete or tangential
-        - 0.4-0.5 = Somewhat relevant - content has some connection but limited usefulness
-        - 0.2-0.3 = Minimally relevant - content barely relates to the query
-        - 0.0-0.1 = Irrelevant - content does not relate to the query
+CONTENT:
+{content_truncated}
 
-        Return ONLY a decimal number between 0.0 and 1.0 (e.g., 0.85):"""
+Scale: 1.0=Perfect, 0.8-0.9=Highly relevant, 0.6-0.7=Moderate, 0.4-0.5=Somewhat, 0.2-0.3=Minimal, 0.0-0.1=Irrelevant
+
+Return ONLY a number (e.g., 0.85):"""
 
         try:
             response = self.grading_provider.generate_response(prompt)
@@ -322,23 +313,73 @@ class NCSUAdvancedResearcher:
         return len(text) // 4
 
     def _truncate_sources_to_fit(self, sources: List[Dict], query: str, max_tokens: int = 120000) -> List[Dict]:
-        """
-        [MODIFIED] Returns all sources directly to preserve complete information.
-        Bypasses token truncation logic to match the behavior of the standalone script (Code 3).
-        """
-        
-        # 简单打印日志，确认接收到了多少页面
-        print(f"\n{'='*80}")
-        print(f"📊 CONTEXT WINDOW ANALYSIS (Bypassed)")
-        print(f"{'='*80}")
-        print(f"   Original Max tokens: {max_tokens:,}")
-        print(f"   Sources available: {len(sources)}")
-        print(f"   ⚠️  TRUNCATION DISABLED: Using all {len(sources)} sources (Full Context Mode)")
-        print(f"{'='*80}\n")
+        """Intelligently truncate sources to fit context window while preserving complete information"""
+        prompt_overhead = 1000
+        response_reserve = self.config.get('llm_max_tokens', 8000)
+        available_tokens = max_tokens - prompt_overhead - response_reserve - self._estimate_tokens(query)
 
-        # 直接返回所有来源，不做任何删减
-        # 这确保了 LLM 能看到所有搜索到的内容
-        return sources
+        # Sort by relevance to prioritize best content
+        sorted_sources = sorted(sources, key=lambda x: x.get('relevance_score', 0.5), reverse=True)
+        
+        truncated_sources = []
+        used_tokens = 0
+        
+        # ADD LOGGING
+        print(f"\n{'='*80}")
+        print(f"📊 CONTEXT WINDOW ANALYSIS")
+        print(f"{'='*80}")
+        print(f"   Max tokens: {max_tokens:,}")
+        print(f"   Prompt overhead: {prompt_overhead:,}")
+        print(f"   Response reserve: {response_reserve:,}")
+        print(f"   Query tokens: {self._estimate_tokens(query):,}")
+        print(f"   Available for content: {available_tokens:,}")
+        print(f"   Sources to process: {len(sorted_sources)}")
+        print()
+
+        for i, source in enumerate(sorted_sources, 1):
+            content_tokens = self._estimate_tokens(source['content'])
+            
+            if used_tokens + content_tokens <= available_tokens:
+                truncated_sources.append(source)
+                used_tokens += content_tokens
+                # ADD LOGGING
+                print(f"   ✅ [{i}] INCLUDED: {source['title'][:60]}")
+                print(f"       Score: {source.get('relevance_score', 0.5):.3f}, Tokens: {content_tokens:,}, Cumulative: {used_tokens:,}/{available_tokens:,}")
+            else:
+                remaining_tokens = available_tokens - used_tokens
+                if remaining_tokens > 1000:
+                    remaining_chars = remaining_tokens * 4
+                    truncated_content = source['content'][:remaining_chars]
+                    
+                    # Try to truncate at sentence boundary
+                    last_period = truncated_content.rfind('. ')
+                    if last_period > remaining_chars * 0.8:
+                        truncated_content = truncated_content[:last_period + 1]
+                    
+                    truncated_sources.append({
+                        **source,
+                        'content': truncated_content + "\n[Content truncated due to length]",
+                        'truncated': True,
+                        'original_word_count': source['word_count'],
+                        'word_count': len(truncated_content.split())
+                    })
+                    used_tokens += remaining_tokens
+                    # ADD LOGGING
+                    print(f"   ⚠️  [{i}] TRUNCATED: {source['title'][:60]}")
+                    print(f"       Score: {source.get('relevance_score', 0.5):.3f}, Used: {remaining_tokens:,}, Cumulative: {used_tokens:,}/{available_tokens:,}")
+                    break
+                else:
+                    # ADD LOGGING
+                    print(f"   ❌ [{i}] SKIPPED: {source['title'][:60]}")
+                    print(f"       Score: {source.get('relevance_score', 0.5):.3f}, Would need: {content_tokens:,}, Only {remaining_tokens:,} left")
+                    break
+
+        # ADD SUMMARY
+        print(f"\n   📊 FINAL: {len(truncated_sources)}/{len(sorted_sources)} sources included")
+        print(f"   📊 Token usage: {used_tokens:,}/{available_tokens:,} ({100*used_tokens/available_tokens:.1f}%)")
+        print(f"{'='*80}\n")
+        
+        return truncated_sources
 
     def build_prompt(self, query: str, sources: List[Dict]) -> str:
         """
