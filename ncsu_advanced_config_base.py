@@ -569,8 +569,8 @@ def main():
         'grading_max_tokens': GRADING_LLM_MAX_TOKENS,
         
         # Search & Content
-        'top_k': 20,
-        'max_pages': 20,
+        'top_k': 30,
+        'max_pages': 30,
         'relevance_threshold': 0.1,
         'enable_grading': True,
         
