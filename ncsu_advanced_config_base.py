@@ -36,6 +36,25 @@ from scraper.models import ScrapingConfig
 from utils.logger import setup_logger
 
 
+# ========================================
+# 🔧 LLM MODEL CONFIGURATION
+# ========================================
+
+# LLM for Answer Generation (Quality)
+ANSWER_LLM_PROVIDER = 'openai'  # Options: 'openai', 'anthropic', 'mock'
+ANSWER_LLM_MODEL = 'gpt-5-mini'  # OpenAI: 'gpt-4o', 'gpt-4-turbo' | Anthropic: 'claude-3-sonnet-20240229', 'claude-3-opus-20240229'
+ANSWER_LLM_TEMPERATURE = 0.3
+ANSWER_LLM_MAX_TOKENS = 4000
+MAX_CONTEXT_TOKENS = 120000  # Max tokens for prompt (gpt-4o=128k, leave buffer)
+
+# LLM for Content Grading (Speed)
+GRADING_LLM_PROVIDER = 'openai'  # Options: 'openai', 'anthropic', 'mock'
+GRADING_LLM_MODEL = 'gpt-5-mini'  # OpenAI: 'gpt-4o-mini', 'gpt-3.5-turbo' | Anthropic: 'claude-3-haiku-20240307'
+GRADING_LLM_TEMPERATURE = 0.3
+GRADING_LLM_MAX_TOKENS = 10
+MAX_GRADING_CONTENT_LENGTH = 2000
+
+
 class ContentCache:
     """Thread-safe cache for scraped content and grades"""
     
@@ -564,50 +583,51 @@ def main():
     # ========================================
     
     config = {
-        # Query
-        'query': 'What are the requirements for the Computer Science major at NC State University?',
-        
-        # LLM for Answer (Quality)
-        'llm_provider': 'openai',
-        'llm_model': 'gpt-4o',
-        'llm_temperature': 0.3,
-        'llm_max_tokens': 4000,
-        'max_context_tokens': 120000,  # Max tokens for prompt (gpt-4o=128k, leave buffer)
-        
-        # LLM for Grading (Speed)
-        'grading_provider': 'openai',
-        'grading_model': 'gpt-4o-mini',
-        'grading_temperature': 0.3,
-        'grading_max_tokens': 10,
-        'max_grading_content_length': 2000,
-        
-        # Search (Optimized for Token Limits)
-        'top_k': 10,
-        'max_pages': 5,  # Reduced to 5 to avoid token overflow
-        'relevance_threshold': 0.6,
-        'enable_grading': False,
-        
-        # Performance Optimizations
-        'parallel_extraction': True,
-        'extraction_workers': 5,
-        'parallel_grading': True,
-        'grading_workers': 5,
-        'enable_caching': True,
-        'enable_early_stopping': True,
-        'early_stop_threshold': 0.85,
-        'early_stop_min_pages': 3,
-        
-        # Extraction
-        'selenium_enabled': True,
-        'enhanced_extraction': True,
-        'timeout': 30,
-        
-        # Output
-        'output_dir': 'results',
-        
-        # API Keys
-        'openai_api_key': os.getenv('OPENAI_API_KEY'),
-    }
+    # Query
+    'query': 'What are the requirements for the Computer Science major at NC State University?',
+    
+    # LLM for Answer (Quality)
+    'llm_provider': ANSWER_LLM_PROVIDER,
+    'llm_model': ANSWER_LLM_MODEL,
+    'llm_temperature': ANSWER_LLM_TEMPERATURE,
+    'llm_max_tokens': ANSWER_LLM_MAX_TOKENS,
+    'max_context_tokens': MAX_CONTEXT_TOKENS,  # gpt-4o=128k, leave buffer
+    
+    # LLM for Grading (Speed)
+    'grading_provider': GRADING_LLM_PROVIDER,
+    'grading_model': GRADING_LLM_MODEL,
+    'grading_temperature': GRADING_LLM_TEMPERATURE,
+    'grading_max_tokens': GRADING_LLM_MAX_TOKENS,
+    'max_grading_content_length': MAX_GRADING_CONTENT_LENGTH,
+    
+    # Search (Optimized for Token Limits)
+    'top_k': 10,
+    'max_pages': 5,  # Reduced to avoid token overflow
+    'relevance_threshold': 0.6,
+    'enable_grading': False,
+    
+    # Performance Optimizations
+    'parallel_extraction': True,
+    'extraction_workers': 5,
+    'parallel_grading': True,
+    'grading_workers': 5,
+    'enable_caching': True,
+    'enable_early_stopping': True,
+    'early_stop_threshold': 0.85,
+    'early_stop_min_pages': 3,
+    
+    # Extraction
+    'selenium_enabled': True,
+    'enhanced_extraction': True,
+    'timeout': 30,
+    
+    # Output
+    'output_dir': 'results',
+    
+    # API Keys
+    'openai_api_key': os.getenv('OPENAI_API_KEY'),
+}
+
     
     if config.get('openai_api_key'):
         os.environ['OPENAI_API_KEY'] = config['openai_api_key']
@@ -650,6 +670,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
