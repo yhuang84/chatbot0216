@@ -342,14 +342,14 @@ with st.sidebar:
     
     llm_model = st.text_input(
         "Model",
-        value="gpt-4o" if llm_provider == "openai" else "claude-3-sonnet-20240229"
+        value="gpt-4.1-mini" if llm_provider == "openai" else "claude-3-sonnet-20240229"
     )
     
     llm_temperature = st.slider(
         "Temperature",
         min_value=0.0,
         max_value=1.0,
-        value=0.7,
+        value=0.3,
         step=0.1,
         help="Lower values = more deterministic, Higher values = more creative"
     )
@@ -441,7 +441,7 @@ st.markdown("**💡 Example Questions:**")
 import random
 example_questions = [
     "Who should I contact for help with high-performance computing (HPC) at NC State University?",
-    "Which professors at NC State University conduct research on yarn?",
+    "Which professors at NC State University conduct research on fiber and textiles?",
     "How can a student request reimbursement for approved travel expenses?",
     "What is the course registration process at NC State University?",
     "What types of scholarships are available to students at NC State University?",
@@ -543,7 +543,6 @@ if ((search_button and bool(query)) or run_from_example) and actual_query:
         'llm_model': llm_model,
         'llm_temperature': llm_temperature,
         'llm_max_tokens': llm_max_tokens,
-        'max_context_tokens': 120000,  # Context window size for intelligent truncation
         'top_k': top_k,
         'max_pages': max_pages,
         'relevance_threshold': relevance_threshold,
@@ -605,9 +604,31 @@ if ((search_button and bool(query)) or run_from_example) and actual_query:
         st.markdown("---")
         st.markdown("## 📝 Answer")
 
-        # ✅ Use researcher's build_prompt() with intelligent truncation
-        # This ensures proper token management and prioritizes highest-relevance sources
-        prompt = researcher.build_prompt(actual_query, results['filtered_pages'])
+        # Build the exact same prompt that generate_answer() would have used
+        sources_text = "\n".join([
+            f"=== SOURCE {i+1}: {s['title']} (Relevance: {s.get('relevance_score', 'N/A')}) ===\n"
+            f"URL: {s['url']}\nContent: {s['content']}\n"
+            for i, s in enumerate(results['filtered_pages'])
+        ])
+        prompt = f"""You are an expert research assistant. Based on the NCSU website content provided below, answer the user's question comprehensively and accurately.
+
+USER QUESTION: {actual_query}
+
+NCSU WEBSITE CONTENT:
+{sources_text}
+
+INSTRUCTIONS:
+- Analyze all the provided content thoroughly
+- Extract and synthesize relevant information to answer the question
+- Provide a comprehensive, well-structured response
+- Use specific details and facts from the content
+- If the content contains the answer, provide it in full detail
+- If the content is incomplete, mention what information is available
+- Be accurate and factual - only use information from the provided content
+- Organize your response logically with clear paragraphs
+- Include specific details, names, dates, and facts when available
+
+COMPREHENSIVE ANSWER:"""
 
         # Choose streaming generator based on provider
         if llm_provider == 'openai':

@@ -7,6 +7,7 @@ Performance Optimizations:
 - Parallel content extraction and LLM grading
 - Content truncation for faster grading
 - Separate models for grading (fast) vs answers (quality)
+- Early stopping when high-quality content found
 - Caching for pages and grades
 - Reduced default parameters for speed
 - Token limit management to prevent context overflow
@@ -207,8 +208,7 @@ class NCSUAdvancedResearcher:
         print(f"📊 Threshold: {config.get('relevance_threshold', 0.6)}")
         print(f"⚡ Parallel: Extract={config.get('parallel_extraction', True)} ({config.get('extraction_workers', 5)}w), "
               f"Grade={config.get('parallel_grading', True)} ({config.get('grading_workers', 5)}w)")
-        # Removed Early Stop print
-        print(f"💾 Cache: {config.get('enable_caching', True)}")
+        print(f"💾 Cache: {config.get('enable_caching', True)}, 🛑 Early Stop: {config.get('enable_early_stopping', True)}")
 
     def _setup_grading_provider(self) -> LLMProvider:
         provider = self.config.get('grading_provider', self.config.get('llm_provider', 'mock')).lower()
@@ -243,42 +243,27 @@ class NCSUAdvancedResearcher:
         return MockLLMProvider()
 
     def grade_content_relevance(self, content: str, query: str) -> float:
-        """Grade content relevance using LLM"""
+        """Grade content relevance with caching and truncation"""
         if self.cache:
             cached = self.cache.get_grade(content, query)
             if cached is not None:
                 return cached
-        
-        # ✅ Use full content for grading - no truncation (like old version)
-        content_to_grade = content
-        
-        # ✅ Restore the detailed grading prompt from old version
-        prompt = f"""You are an expert content grader. Grade how relevant this content is to answering the user's query.
 
-USER QUERY: {query}
+        max_chars = self.config.get('max_grading_content_length', 2000)
+        content_truncated = content[:max_chars]
 
-CONTENT TO GRADE:
-{content_to_grade}
+        prompt = f"""Grade relevance of content to query (0.0-1.0):
 
-GRADING INSTRUCTIONS:
-- Analyze the entire content thoroughly
-- Consider how well the content answers or relates to the query
-- Ignore navigation menus, headers, and boilerplate text
-- Focus on the substantive information that addresses the query
-- Consider information quality, accuracy, and completeness
+QUERY: {query}
 
-SCORING SCALE:
-- 1.0 = Perfect match - content directly and comprehensively answers the query
-- 0.8-0.9 = Highly relevant - content strongly relates and provides good information
-- 0.6-0.7 = Moderately relevant - content relates but may be incomplete or tangential
-- 0.4-0.5 = Somewhat relevant - content has some connection but limited usefulness
-- 0.2-0.3 = Minimally relevant - content barely relates to the query
-- 0.0-0.1 = Irrelevant - content does not relate to the query
+CONTENT:
+{content_truncated}
 
-Return ONLY a decimal number between 0.0 and 1.0 (e.g., 0.85):"""
-        
+Scale: 1.0=Perfect, 0.8-0.9=Highly relevant, 0.6-0.7=Moderate, 0.4-0.5=Somewhat, 0.2-0.3=Minimal, 0.0-0.1=Irrelevant
+
+Return ONLY a number (e.g., 0.85):"""
+
         try:
-            # Note: use self.grading_provider (new) not self.llm_provider (old)
             response = self.grading_provider.generate_response(prompt)
             import re
             match = re.search(r'(\d+\.?\d*)', response)
@@ -382,12 +367,12 @@ Return ONLY a decimal number between 0.0 and 1.0 (e.g., 0.85):"""
                     # ADD LOGGING
                     print(f"   ⚠️  [{i}] TRUNCATED: {source['title'][:60]}")
                     print(f"       Score: {source.get('relevance_score', 0.5):.3f}, Used: {remaining_tokens:,}, Cumulative: {used_tokens:,}/{available_tokens:,}")
-                    # Continue checking other sources instead of breaking
+                    break
                 else:
                     # ADD LOGGING
                     print(f"   ❌ [{i}] SKIPPED: {source['title'][:60]}")
                     print(f"       Score: {source.get('relevance_score', 0.5):.3f}, Would need: {content_tokens:,}, Only {remaining_tokens:,} left")
-                    # Continue checking other sources instead of breaking
+                    break
 
         # ADD SUMMARY
         print(f"\n   📊 FINAL: {len(truncated_sources)}/{len(sorted_sources)} sources included")
@@ -455,7 +440,7 @@ COMPREHENSIVE ANSWER:"""
             'query': query, 'timestamp': datetime.now().isoformat(), 'config': self.config,
             'search_results': [], 'extracted_pages': [], 'graded_pages': [], 'filtered_pages': [],
             'final_answer': '', 'sources': [],
-            'performance_stats': {'cached_pages': 0, 'cached_grades': 0}
+            'performance_stats': {'cached_pages': 0, 'cached_grades': 0, 'early_stopped': False}
         }
 
         # Step 1: Search (silently append "at ncsu" if not already present)
@@ -536,13 +521,22 @@ COMPREHENSIVE ANSWER:"""
             graded_pages = [{**p, 'relevance_score': 1.0} for p in extracted_pages]
             results['graded_pages'] = graded_pages
 
-        # Step 4: Filter (EARLY STOP REMOVED)
+        # Step 4: Filter + Early Stop
         print(f"\n📋 STEP 4: Filtering (threshold: {self.config.get('relevance_threshold', 0.6)})...")
         threshold = self.config.get('relevance_threshold', 0.6)
         filtered_pages = sorted(
             [p for p in graded_pages if p['relevance_score'] >= threshold],
             key=lambda x: x['relevance_score'], reverse=True
         )
+
+        if self.config.get('enable_early_stopping', True):
+            early_threshold = self.config.get('early_stop_threshold', 0.85)
+            early_min = self.config.get('early_stop_min_pages', 3)
+            high_quality = [p for p in filtered_pages if p['relevance_score'] >= early_threshold]
+            if len(high_quality) >= early_min:
+                print(f"🛑 Early stop: {len(high_quality)} pages ≥ {early_threshold}")
+                filtered_pages = high_quality[:early_min]
+                results['performance_stats']['early_stopped'] = True
 
         if not filtered_pages:
             print(f"⚠️ No pages meet threshold, using top page")
@@ -598,6 +592,7 @@ COMPREHENSIVE ANSWER:"""
                 f.write(f"    {s['url']} ({s['word_count']:,} words)\n\n")
             f.write("=" * 50 + "\nPERFORMANCE:\n" + "=" * 50 + "\n")
             f.write(f"Cached pages: {results['performance_stats']['cached_pages']}\n")
+            f.write(f"Early stopped: {results['performance_stats']['early_stopped']}\n")
         files['answer'] = str(answer_file)
 
         # Create a serializable copy of config (remove function objects like progress_callback)
@@ -630,6 +625,7 @@ COMPREHENSIVE ANSWER:"""
             print(f"    {s['url']} ({s['word_count']:,} words)")
         print(f"\n⚡ PERFORMANCE:")
         print(f"💾 Cached: {results['performance_stats']['cached_pages']} pages")
+        print(f"🛑 Early stopped: {results['performance_stats']['early_stopped']}")
 
 
 def main():
@@ -662,7 +658,7 @@ def main():
         # Search & extraction
         'top_k': 20,
         'max_pages': 10,
-        'relevance_threshold': 0.1,
+        'relevance_threshold': 0.2,
 
         # Grading ON so pages are actually filtered meaningfully
         'enable_grading': True,
@@ -671,8 +667,9 @@ def main():
         'parallel_grading': True,
         'grading_workers': 5,
 
-        # Caching ON, early stopping REMOVED so all graded pages reach the LLM
+        # Caching ON, early stopping OFF so all graded pages reach the LLM
         'enable_caching': True,
+        'enable_early_stopping': False,
 
         # Scraping
         'selenium_enabled': True,
@@ -719,6 +716,7 @@ def main():
         print(f"✅ Filtered {len(results['filtered_pages'])} pages ({sum(p['word_count'] for p in results['filtered_pages']):,} words)")
         print(f"✅ Generated answer ({len(results['final_answer']):,} chars)")
         print(f"💾 Cached: {results['performance_stats']['cached_pages']} pages")
+        print(f"🛑 Early stopped: {results['performance_stats']['early_stopped']}")
 
     except KeyboardInterrupt:
         print("\n⚠️ Interrupted")
@@ -730,4 +728,10 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+
 
