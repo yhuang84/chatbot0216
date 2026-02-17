@@ -394,7 +394,7 @@ COMPREHENSIVE ANSWER:"""
         }
 
         # Step 1: Search
-        search_query = query
+        search_query = query if "ncsu" in query.lower() or "nc state" in query.lower() else query + " at ncsu"
         print(f"\n📋 STEP 1: Searching NCSU...")
         search_results = self.scraper.search(search_query, max_results=self.config.get('top_k', 10))
         results['search_results'] = [{'title': r.title, 'url': str(r.url), 'snippet': r.snippet} for r in search_results]
@@ -569,9 +569,9 @@ def main():
         'grading_max_tokens': GRADING_LLM_MAX_TOKENS,
         
         # Search & Content
-        'top_k': 30,
-        'max_pages': 30,
-        'relevance_threshold': 0.1,
+        'top_k': 20,
+        'max_pages': 15,
+        'relevance_threshold': 0.3,
         'enable_grading': True,
         
         # Performance
