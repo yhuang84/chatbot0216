@@ -631,6 +631,10 @@ INSTRUCTIONS:
 - Be accurate and factual - only use information from the provided content
 - Organize your response logically with clear paragraphs
 - Include specific details, names, dates, and facts when available
+- IMPORTANT: When mentioning any webpage, department, office, tool, or resource, always include a clickable markdown hyperlink using the format [display text](URL) with the actual URL from the source content
+- Link contact pages, department homepages, forms, and any other actionable resources so readers can click through directly
+- For email addresses, use markdown mailto links like [email@ncsu.edu](mailto:email@ncsu.edu)
+- For phone numbers, use markdown tel links like [919-515-XXXX](tel:919-515-XXXX)
 
 COMPREHENSIVE ANSWER:"""
 
