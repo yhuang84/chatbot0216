@@ -526,13 +526,29 @@ if ((search_button and bool(query)) or run_from_example) and actual_query:
     
     # Create containers for real-time updates
     progress_container = st.container()
-    extraction_status = st.empty()
+    
+    # Create message log to accumulate all messages
+    message_log = []
+    
+    # Create expander for message log (initially expanded)
+    log_expander = st.expander("📋 Research Progress Log", expanded=True)
+    log_container = log_expander.empty()
     
     # Message callback to receive updates from researcher
     def message_callback(msg: str):
-        """Receive messages from researcher and display in UI (one at a time)"""
-        # Each message replaces the previous one
-        extraction_status.info(f"{msg}")
+        """Receive messages from researcher and accumulate in log"""
+        message_log.append(msg)
+        
+        # Display all messages in scrollable text area
+        log_text = "\n".join(message_log)
+        log_container.text_area(
+            "Progress",
+            value=log_text,
+            height=250,
+            disabled=True,
+            label_visibility="collapsed",
+            key=f"log_{len(message_log)}"  # Unique key for each update
+        )
     
     config = {
         'query': actual_query,
@@ -583,8 +599,24 @@ if ((search_button and bool(query)) or run_from_example) and actual_query:
             percentage_text.markdown("**Progress: 90% — Generating answer...**")
             status_text.info("💬 Streaming...")
 
-        # ── Stream the answer into the UI ─────────────────────────────────────
+        # ── Collapse the research log and show answer ──────────────────────────
         st.markdown("---")
+        
+        # Replace the expanded log with a collapsed version
+        log_expander.empty()  # Clear the original expander
+        
+        # Create new collapsed expander with final log
+        with st.expander("📋 Research Progress Log (Completed - Click to expand)", expanded=False):
+            log_text_final = "\n".join(message_log)
+            st.text_area(
+                "Progress",
+                value=log_text_final,
+                height=250,
+                disabled=True,
+                label_visibility="collapsed",
+                key="log_final"
+            )
+        
         st.markdown("## 📝 Answer")
 
         # Build the exact same prompt that generate_answer() would have used
@@ -637,9 +669,6 @@ COMPREHENSIVE ANSWER:"""
             status_text.empty()
             percentage_text.empty()
         
-        # Clear extraction status
-        extraction_status.empty()
-
         # Save answer + results
         results['final_answer'] = final_answer
         st.session_state.final_answer = final_answer
