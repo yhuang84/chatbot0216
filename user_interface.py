@@ -605,6 +605,17 @@ if ((search_button and bool(query)) or run_from_example) and actual_query:
         # Replace the expanded log with a collapsed version
         log_expander.empty()  # Clear the original expander
         
+        # Create new collapsed expander with final log
+        with st.expander("📋 Research Progress Log (Completed - Click to expand)", expanded=False):
+            log_text_final = "\n".join(message_log)
+            st.text_area(
+                "Progress",
+                value=log_text_final,
+                height=250,
+                disabled=True,
+                label_visibility="collapsed",
+                key="log_final"
+            )
         
         st.markdown("## 📝 Answer")
 
@@ -631,10 +642,6 @@ INSTRUCTIONS:
 - Be accurate and factual - only use information from the provided content
 - Organize your response logically with clear paragraphs
 - Include specific details, names, dates, and facts when available
-- IMPORTANT: When mentioning any webpage, department, office, tool, or resource, always include a clickable markdown hyperlink using the format [display text](URL) with the actual URL from the source content
-- Link contact pages, department homepages, forms, and any other actionable resources so readers can click through directly
-- For email addresses, use markdown mailto links like [email@ncsu.edu](mailto:email@ncsu.edu)
-- For phone numbers, use markdown tel links like [919-515-XXXX](tel:919-515-XXXX)
 
 COMPREHENSIVE ANSWER:"""
 
@@ -727,27 +734,27 @@ if st.session_state.results and not st.session_state.running:
     
     with col1:
         st.metric(
-            "🔍 Search Results",
+            "🔍 Sources Analyzed",
             len(results.get('search_results', []))
         )
     
     with col2:
         st.metric(
-            "📄 Pages Extracted",
+            "📄 Content Extracted",
             len(results.get('extracted_pages', []))
         )
     
     with col3:
         st.metric(
-            "✅ Pages Filtered",
+            "✅ Relevant Pages",
             len(results.get('filtered_pages', []))
         )
     
     with col4:
         total_words = sum(p.get('word_count', 0) for p in results.get('filtered_pages', []))
         st.metric(
-            "📝 Total Words",
-            f"{total_words:,}"
+            "📝 Total Content",
+            f"{total_words:,} words"
         )
     
     col1, col2, col3 = st.columns([1, 1, 1])

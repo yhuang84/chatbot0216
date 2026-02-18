@@ -249,7 +249,7 @@ COMPREHENSIVE ANSWER:"""
         
         # Notify UI
         if self.config.get('message_callback'):
-            self.config['message_callback'](f"📋 STEP 1: Searching NCSU (Top-K={self.config.get('top_k')})...")
+            self.config['message_callback'](f"📋 STEP 1: Searching NCSU...")
         
         search_results = self.scraper.search(query, max_results=self.config.get('top_k', 30))
         results['search_results'] = [{'title': r.title, 'url': str(r.url)} for r in search_results]
@@ -262,7 +262,7 @@ COMPREHENSIVE ANSWER:"""
         
         # Notify UI - search complete
         if self.config.get('message_callback'):
-            self.config['message_callback'](f"✅ Found {len(search_results)} search results")
+            self.config['message_callback'](f"✅ Search completed successfully")
             
         # 2. Extract (Old Code: Batch extract using scraper.scrape_pages list)
         max_pages = self.config.get('max_pages', 20)
@@ -271,7 +271,7 @@ COMPREHENSIVE ANSWER:"""
         
         # Notify UI
         if self.config.get('message_callback'):
-            self.config['message_callback'](f"📋 STEP 2: Extracting content from {len(pages_to_extract)} pages...")
+            self.config['message_callback'](f"📋 STEP 2: Extracting content from pages...")
         
         # Using the scraper's built-in batch method (Old Code Style)
         scraped_pages = self.scraper.scrape_pages(pages_to_extract)
@@ -285,7 +285,7 @@ COMPREHENSIVE ANSWER:"""
         
         # Notify UI
         if self.config.get('message_callback'):
-            self.config['message_callback'](f"✅ Extracted {len(successful_pages)}/{len(pages_to_extract)} pages successfully")
+            self.config['message_callback'](f"✅ Successfully extracted content from pages")
 
         # 3. Grade (Old Code: Serial Loop)
         if self.config.get('enable_grading', True):
@@ -293,7 +293,7 @@ COMPREHENSIVE ANSWER:"""
             
             # Notify UI
             if self.config.get('message_callback'):
-                self.config['message_callback'](f"📋 STEP 3: Grading {len(successful_pages)} pages for relevance...")
+                self.config['message_callback'](f"📋 STEP 3: Analyzing content relevance...")
             
             graded_pages = []
             for i, page in enumerate(successful_pages, 1):
@@ -302,14 +302,14 @@ COMPREHENSIVE ANSWER:"""
                 
                 # Notify UI for each page grading
                 if self.config.get('message_callback'):
-                    self.config['message_callback'](f"  🔍 Grading [{i}/{len(successful_pages)}] {page['title'][:45]}... Score: {score:.2f}")
+                    self.config['message_callback'](f"  🔍 Analyzing: {page['title'][:50]}... Score: {score:.2f}")
                 
                 graded_pages.append({**page, 'relevance_score': score})
             results['graded_pages'] = graded_pages
             
             # Notify UI - grading complete
             if self.config.get('message_callback'):
-                self.config['message_callback'](f"✅ Grading complete for {len(graded_pages)} pages")
+                self.config['message_callback'](f"✅ Content analysis complete")
         else:
             results['graded_pages'] = [{**p, 'relevance_score': 1.0} for p in successful_pages]
 
@@ -318,7 +318,7 @@ COMPREHENSIVE ANSWER:"""
         
         # Notify UI
         if self.config.get('message_callback'):
-            self.config['message_callback'](f"📋 STEP 4: Filtering by relevance threshold ({self.config.get('relevance_threshold', 0.1)})...")
+            self.config['message_callback'](f"📋 STEP 4: Filtering by relevance...")
         
         threshold = self.config.get('relevance_threshold', 0.1)
         filtered_pages = [p for p in results['graded_pages'] if p['relevance_score'] >= threshold]
@@ -344,7 +344,7 @@ COMPREHENSIVE ANSWER:"""
         
         # Notify UI - final
         if self.config.get('message_callback'):
-            self.config['message_callback'](f"✅ Research complete: {len(filtered_pages)} relevant pages ready")
+            self.config['message_callback'](f"✅ Research complete - ready to generate answer")
         
         # STOP HERE. Do not generate answer. Return results so UI can stream.
         return results
