@@ -246,17 +246,32 @@ COMPREHENSIVE ANSWER:"""
         
         # 1. Search (Old Code: Just call search)
         print(f"\n📋 STEP 1: Searching NCSU (Top-K={self.config.get('top_k')})...")
+        
+        # Notify UI
+        if self.config.get('message_callback'):
+            self.config['message_callback'](f"📋 STEP 1: Searching NCSU (Top-K={self.config.get('top_k')})...")
+        
         search_results = self.scraper.search(query, max_results=self.config.get('top_k', 30))
         results['search_results'] = [{'title': r.title, 'url': str(r.url)} for r in search_results]
         
         if not search_results:
             print("❌ No search results found.")
+            if self.config.get('message_callback'):
+                self.config['message_callback']("❌ No search results found")
             return results
+        
+        # Notify UI - search complete
+        if self.config.get('message_callback'):
+            self.config['message_callback'](f"✅ Found {len(search_results)} search results")
             
         # 2. Extract (Old Code: Batch extract using scraper.scrape_pages list)
         max_pages = self.config.get('max_pages', 20)
         pages_to_extract = search_results[:max_pages]
         print(f"\n📋 STEP 2: Batch Extracting {len(pages_to_extract)} pages...")
+        
+        # Notify UI
+        if self.config.get('message_callback'):
+            self.config['message_callback'](f"📋 STEP 2: Extracting content from {len(pages_to_extract)} pages...")
         
         # Using the scraper's built-in batch method (Old Code Style)
         scraped_pages = self.scraper.scrape_pages(pages_to_extract)
@@ -267,27 +282,52 @@ COMPREHENSIVE ANSWER:"""
         ]
         successful_pages = [p for p in results['extracted_pages'] if p['extraction_success']]
         print(f"✅ Extracted {len(successful_pages)} pages.")
+        
+        # Notify UI
+        if self.config.get('message_callback'):
+            self.config['message_callback'](f"✅ Extracted {len(successful_pages)}/{len(pages_to_extract)} pages successfully")
 
         # 3. Grade (Old Code: Serial Loop)
         if self.config.get('enable_grading', True):
             print(f"\n📋 STEP 3: Grading content (Serial)...")
+            
+            # Notify UI
+            if self.config.get('message_callback'):
+                self.config['message_callback'](f"📋 STEP 3: Grading {len(successful_pages)} pages for relevance...")
+            
             graded_pages = []
             for i, page in enumerate(successful_pages, 1):
                 score = self.grade_content_relevance(page['content'], query)
                 print(f"  [{i}] {page['title'][:30]}... Score: {score:.2f}")
+                
+                # Notify UI for each page grading
+                if self.config.get('message_callback'):
+                    self.config['message_callback'](f"  🔍 Grading [{i}/{len(successful_pages)}] {page['title'][:45]}... Score: {score:.2f}")
+                
                 graded_pages.append({**page, 'relevance_score': score})
             results['graded_pages'] = graded_pages
+            
+            # Notify UI - grading complete
+            if self.config.get('message_callback'):
+                self.config['message_callback'](f"✅ Grading complete for {len(graded_pages)} pages")
         else:
             results['graded_pages'] = [{**p, 'relevance_score': 1.0} for p in successful_pages]
 
         # 4. Filter (Old Code Logic)
         print(f"\n📋 STEP 4: Filtering...")
+        
+        # Notify UI
+        if self.config.get('message_callback'):
+            self.config['message_callback'](f"📋 STEP 4: Filtering by relevance threshold ({self.config.get('relevance_threshold', 0.1)})...")
+        
         threshold = self.config.get('relevance_threshold', 0.1)
         filtered_pages = [p for p in results['graded_pages'] if p['relevance_score'] >= threshold]
         
         # Fallback if everything filtered out
         if not filtered_pages and results['graded_pages']:
             print("⚠️ Threshold too high, using top result.")
+            if self.config.get('message_callback'):
+                self.config['message_callback']("⚠️ Threshold too high, keeping top result")
             filtered_pages = [max(results['graded_pages'], key=lambda x: x['relevance_score'])]
 
         # Sort by relevance
@@ -301,6 +341,10 @@ COMPREHENSIVE ANSWER:"""
         ]
         
         print(f"✅ Ready with {len(filtered_pages)} relevant pages.")
+        
+        # Notify UI - final
+        if self.config.get('message_callback'):
+            self.config['message_callback'](f"✅ Research complete: {len(filtered_pages)} relevant pages ready")
         
         # STOP HERE. Do not generate answer. Return results so UI can stream.
         return results

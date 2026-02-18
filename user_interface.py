@@ -528,12 +528,11 @@ if ((search_button and bool(query)) or run_from_example) and actual_query:
     progress_container = st.container()
     extraction_status = st.empty()
     
-    # Progress callback for real-time extraction updates
-    def progress_callback(event_type, data):
-        if event_type == 'extraction':
-            title = data['title'][:50]  # Truncate long titles
-            word_count = data['word_count']
-            extraction_status.success(f"✅ {title} ({word_count:,} words)")
+    # Message callback to receive updates from researcher
+    def message_callback(msg: str):
+        """Receive messages from researcher and display in UI (one at a time)"""
+        # Each message replaces the previous one
+        extraction_status.info(f"{msg}")
     
     config = {
         'query': actual_query,
@@ -551,7 +550,7 @@ if ((search_button and bool(query)) or run_from_example) and actual_query:
         'max_content_length': max_content_length,
         'output_dir': 'results',
         'timeout': timeout,
-        'progress_callback': progress_callback
+        'message_callback': message_callback  # Add callback to config
     }
     
     try:
@@ -570,22 +569,8 @@ if ((search_button and bool(query)) or run_from_example) and actual_query:
             percentage_text.markdown("**Progress: 20%**")
             status_text.success("✅ Researcher initialized successfully")
             time.sleep(0.5)
-            
-            progress_bar.progress(25)
-            percentage_text.markdown("**Progress: 25%**")
-            status_text.info("🔍 Searching NCSU website...")
-            time.sleep(0.3)
-            
-            progress_bar.progress(40)
-            percentage_text.markdown("**Progress: 40%**")
-            status_text.success("✅ Search completed, found results")
-            time.sleep(0.5)
-            
-            progress_bar.progress(50)
-            percentage_text.markdown("**Progress: 50%**")
-            status_text.info("📄 Extracting content from pages...")
         
-        # Run research with live status updates (callback shows pages as they're extracted)
+        # Run research with live status updates from message_callback
         results = researcher.research(actual_query)
         
         with progress_container:
