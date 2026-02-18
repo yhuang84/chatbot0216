@@ -605,17 +605,6 @@ if ((search_button and bool(query)) or run_from_example) and actual_query:
         # Replace the expanded log with a collapsed version
         log_expander.empty()  # Clear the original expander
         
-        # Create new collapsed expander with final log
-        with st.expander("📋 Research Progress Log (Completed - Click to expand)", expanded=False):
-            log_text_final = "\n".join(message_log)
-            st.text_area(
-                "Progress",
-                value=log_text_final,
-                height=250,
-                disabled=True,
-                label_visibility="collapsed",
-                key="log_final"
-            )
         
         st.markdown("## 📝 Answer")
 
