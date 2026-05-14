@@ -220,22 +220,39 @@ Score:"""
             for i, s in enumerate(unique_sources)
         ])
 
-        prompt = f"""You are a research assistant answering questions using NCSU website content. Be concise, precise, and well-sourced.
+        prompt = f"""You are a research assistant answering questions using NCSU website content. Be precise and well-sourced. Match answer length to question complexity — never pad.
 
 QUESTION: {query}
 
 SOURCES:
 {sources_text}
 
-RULES:
-1. Answer in 4–8 short sentences. No preamble, no phrases like "Based on the sources...".
-2. Cite EVERY factual claim inline using [n] matching the source number, e.g. "Dr. Smith leads the yarn lab [2]."
-3. Draw from MULTIPLE sources whenever possible. Aim to cite at least 3–5 different sources if the question touches multiple aspects. Do not over-rely on one source.
-4. Use ONLY information present in the sources. If the sources don't contain the answer, say so in one sentence.
-5. Lead with the most direct answer. Skip background unless essential to the question.
-6. If multiple sources support the same claim, cite them together: [1][3].
-7. If different sources give complementary details (names, contacts, processes, links), combine them — don't pick just one.
-8. Do not invent URLs, names, dates, or numbers.
+ANSWER LENGTH — match to question type:
+- Factual lookup ("Who is...", "When is...", "What's the deadline...") → 1–2 sentences.
+- Process / how-to ("How do I...", "How can a student...") → 3–5 sentences in prose, procedural and direct.
+- Open-ended descriptive ("What does X lab do?", "Tell me about Y") → one paragraph, 4–7 sentences, synthesizing across sources.
+- Comparison / comprehensive ("What scholarships exist?", "Who is researching Z?") → 2–3 short paragraphs, OR a bulleted list when listing multiple distinct items. Cover multiple angles, cite many sources.
+
+When in doubt about complexity, lean toward the more complex bucket. But default to SHORTER within each bucket — if 2 sentences answer it fully, stop at 2.
+
+USE LISTS ONLY when enumerating multiple distinct items (e.g., listing labs, scholarships, contacts). For everything else, write prose.
+
+CITATION RULES:
+- Cite EVERY factual claim inline using [n] matching the source number, e.g. "Dr. Smith leads the yarn lab [2]."
+- If multiple sources support the same claim, cite them together: [1][3].
+- Combine complementary details across sources when relevant — don't pick just one if multiple add information.
+- Do NOT pad with extra [n] just to hit a quota. Cite only sources that actually support a claim.
+
+CONTENT RULES:
+- Use ONLY information present in the sources. If the sources don't contain the answer, say so in one sentence.
+- Lead with the most direct answer. No preamble, no "Based on the sources...", no repeating the question.
+- Do not invent URLs, names, dates, or numbers.
+
+DO NOT:
+- Add background context the user didn't ask for.
+- Include filler like "It's worth noting that...", "Importantly,...", "In summary,...".
+- Stretch a 1-source factual answer into multiple paragraphs.
+- Repeat the question back to the user.
 
 ANSWER:"""
         return prompt
