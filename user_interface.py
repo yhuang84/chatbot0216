@@ -480,15 +480,39 @@ if 'example_to_search' not in st.session_state: st.session_state.example_to_sear
 # Header
 # ════════════════════════════════════════════════════════════════════
 
-st.markdown("""
+# ════════════════════════════════════════════════════════════════════
+# Header (with logos)
+# ════════════════════════════════════════════════════════════════════
+
+logo_path = os.path.join(CURRENT_DIR, "NC-State-University-Logo.png")
+wolfpack_path = os.path.join(CURRENT_DIR, "NC_State_Wolfpack_logo.svg.png")
+
+hdr_col1, hdr_col2, hdr_col3 = st.columns([1, 4, 1], vertical_alignment="center")
+
+with hdr_col1:
+    if os.path.exists(logo_path):
+        st.image(logo_path, width=90)
+    else:
+        st.markdown('<div style="font-size:2.5rem;text-align:center;">🐺</div>', unsafe_allow_html=True)
+
+with hdr_col2:
+    st.markdown("""
 <div class="header-wrap">
-    <div class="header-accent"></div>
-    <div>
-        <h1 class="header-title">NCSU Research Assistant</h1>
-        <p class="header-subtitle">AI-powered search across NC State University</p>
-    </div>
+<div class="header-accent"></div>
+<div>
+<h1 class="header-title">NCSU Research Assistant</h1>
+<p class="header-subtitle">AI-powered search across NC State University</p>
+</div>
 </div>
 """, unsafe_allow_html=True)
+
+with hdr_col3:
+    if os.path.exists(wolfpack_path):
+        st.image(wolfpack_path, width=90)
+    else:
+        st.markdown('<div style="font-size:2.5rem;text-align:center;">🏛️</div>', unsafe_allow_html=True)
+
+st.markdown("<hr>", unsafe_allow_html=True)
 
 
 # ════════════════════════════════════════════════════════════════════
@@ -521,7 +545,14 @@ with st.sidebar:
     st.markdown("### Search")
     top_k = st.slider("Top-K results", 5, 50, 30, 5)
     max_pages = st.slider("Max pages", 5, 30, 20, 5)
-    relevance_threshold = st.slider("Relevance threshold", 0.0, 1.0, 0.4, 0.05)
+    relevance_threshold = st.slider(
+        "Relevance threshold", 0.0, 1.0, 0.25, 0.05,
+        help="Pages scoring below this are filtered out (unless min sources kicks in).",
+    )
+    min_sources = st.slider(
+        "Minimum sources", 1, 15, 5, 1,
+        help="Always keep at least this many top-scored sources, even if they fall below threshold.",
+    )
 
     with st.expander("Advanced"):
         enable_grading = st.checkbox("Enable grading", value=True)
@@ -656,6 +687,7 @@ if ((search_button and bool(query)) or run_from_example) and actual_query:
         'top_k': top_k,
         'max_pages': max_pages,
         'relevance_threshold': relevance_threshold,
+        'min_sources': min_sources,
         'enable_grading': enable_grading,
         'selenium_enabled': selenium_enabled,
         'enhanced_extraction': enhanced_extraction,
@@ -770,35 +802,41 @@ if st.session_state.results and not st.session_state.running:
         st.markdown(f'<div class="answer-body">{rendered}</div>', unsafe_allow_html=True)
 
     # ── Sources as card grid ─────────────────────────────────────────
+    # IMPORTANT: HTML must have NO leading whitespace per line, or Streamlit
+    # markdown treats indented blocks as code. Keep everything left-aligned.
     sources = results.get('sources', [])
     if sources:
         st.markdown("## Sources")
 
-        # Build HTML for source cards
-        cards_html = '<div class="source-grid">'
+        cards_parts = ['<div class="source-grid">']
         for i, s in enumerate(sources, 1):
             d = domain_of(s['url'])
             fav = favicon_url(s['url'])
             score = s.get('relevance_score', 0)
             score_pct = int(score * 100)
             title = (s['title'] or 'Untitled').replace('<', '&lt;').replace('>', '&gt;')
-            cards_html += f"""
-            <a href="{s['url']}" target="_blank" class="source-card">
-                <div class="source-card-header">
-                    <img src="{fav}" class="source-card-favicon" onerror="this.style.display='none'">
-                    <span class="source-card-domain">{d}</span>
-                    <span class="source-card-number">{i}</span>
-                </div>
-                <div class="source-card-title">{title}</div>
-                <div class="source-card-meta">
-                    <span>{score:.2f} relevance</span>
-                    <div class="relevance-bar">
-                        <div class="relevance-bar-fill" style="width: {score_pct}%"></div>
-                    </div>
-                </div>
-            </a>
-            """
-        cards_html += '</div>'
+            url_safe = s['url'].replace('"', '&quot;')
+            # Single-line per card — no leading whitespace anywhere
+            card = (
+                f'<a href="{url_safe}" target="_blank" class="source-card">'
+                f'<div class="source-card-header">'
+                f'<img src="{fav}" class="source-card-favicon" onerror="this.style.display=\'none\'">'
+                f'<span class="source-card-domain">{d}</span>'
+                f'<span class="source-card-number">{i}</span>'
+                f'</div>'
+                f'<div class="source-card-title">{title}</div>'
+                f'<div class="source-card-meta">'
+                f'<span>{score:.2f} relevance</span>'
+                f'<div class="relevance-bar">'
+                f'<div class="relevance-bar-fill" style="width: {score_pct}%"></div>'
+                f'</div>'
+                f'</div>'
+                f'</a>'
+            )
+            cards_parts.append(card)
+        cards_parts.append('</div>')
+        # Join with newlines (not indented) — safe for markdown
+        cards_html = '\n'.join(cards_parts)
         st.markdown(cards_html, unsafe_allow_html=True)
 
     # ── Stats ─────────────────────────────────────────────────────────

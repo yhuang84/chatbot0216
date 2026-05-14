@@ -220,7 +220,7 @@ Score:"""
             for i, s in enumerate(unique_sources)
         ])
 
-        prompt = f"""You are a research assistant answering questions using NCSU website content. Be concise and precise.
+        prompt = f"""You are a research assistant answering questions using NCSU website content. Be concise, precise, and well-sourced.
 
 QUESTION: {query}
 
@@ -228,12 +228,14 @@ SOURCES:
 {sources_text}
 
 RULES:
-1. Answer in 3–6 short sentences. No preamble, no phrases like "Based on the sources...".
-2. Cite every factual claim inline using [n] matching the source number, e.g. "Dr. Smith leads the yarn lab [2]."
-3. Use ONLY information present in the sources. If the sources don't contain the answer, say so in one sentence.
-4. Lead with the most direct answer. Skip background unless essential to the question.
-5. If multiple sources support the same claim, cite them together: [1][3].
-6. Do not invent URLs, names, dates, or numbers.
+1. Answer in 4–8 short sentences. No preamble, no phrases like "Based on the sources...".
+2. Cite EVERY factual claim inline using [n] matching the source number, e.g. "Dr. Smith leads the yarn lab [2]."
+3. Draw from MULTIPLE sources whenever possible. Aim to cite at least 3–5 different sources if the question touches multiple aspects. Do not over-rely on one source.
+4. Use ONLY information present in the sources. If the sources don't contain the answer, say so in one sentence.
+5. Lead with the most direct answer. Skip background unless essential to the question.
+6. If multiple sources support the same claim, cite them together: [1][3].
+7. If different sources give complementary details (names, contacts, processes, links), combine them — don't pick just one.
+8. Do not invent URLs, names, dates, or numbers.
 
 ANSWER:"""
         return prompt
@@ -330,12 +332,25 @@ ANSWER:"""
         if self.config.get('message_callback'):
             self.config['message_callback']("📋 STEP 4: Filtering by relevance...")
 
-        threshold = self.config.get('relevance_threshold', 0.4)
-        filtered_pages = [p for p in results['graded_pages'] if p['relevance_score'] >= threshold]
+        threshold = self.config.get('relevance_threshold', 0.25)
+        min_sources = self.config.get('min_sources', 5)  # Always keep at least N sources
 
-        # Fallback: keep top result if everything filtered out
+        # Sort all graded pages by relevance first
+        all_sorted = sorted(results['graded_pages'], key=lambda x: x['relevance_score'], reverse=True)
+        filtered_pages = [p for p in all_sorted if p['relevance_score'] >= threshold]
+
+        # Top-N fallback: if threshold filter is too aggressive, ensure min_sources
+        if len(filtered_pages) < min_sources and all_sorted:
+            print(f"⚠️ Only {len(filtered_pages)} passed threshold; topping up to {min_sources}.")
+            if self.config.get('message_callback'):
+                self.config['message_callback'](
+                    f"⚠️ Topping up to {min_sources} sources (threshold too strict)"
+                )
+            filtered_pages = all_sorted[:min_sources]
+
+        # Fallback: keep top result if literally nothing
         if not filtered_pages and results['graded_pages']:
-            print("⚠️ Threshold too high, using top result.")
+            print("⚠️ No graded content; using top result.")
             if self.config.get('message_callback'):
                 self.config['message_callback']("⚠️ Threshold too high, keeping top result")
             filtered_pages = [max(results['graded_pages'], key=lambda x: x['relevance_score'])]
@@ -428,8 +443,9 @@ def main():
 
         # 3. Search Settings
         'top_k': 30,
-        'max_pages': 20,                  # ← was 30
-        'relevance_threshold': 0.4,       # ← was 0.1; real filtering now
+        'max_pages': 20,
+        'relevance_threshold': 0.25,      # ← lowered: more sources reach the LLM
+        'min_sources': 5,                 # ← new: guarantee at least N sources
 
         # 4. Features
         'enable_grading': True,
