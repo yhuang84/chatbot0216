@@ -220,35 +220,18 @@ Score:"""
             for i, s in enumerate(unique_sources)
         ])
 
-        prompt = f"""You are a research assistant answering questions using NCSU website content. Be precise and well-sourced.
+        prompt = f"""You are a research assistant answering questions using NCSU website content. Write comprehensive, well-sourced answers in clear prose.
 
 QUESTION: {query}
 
 SOURCES:
 {sources_text}
 
-STEP 1 — CLASSIFY the question type. Your first line MUST be exactly one of:
-[TYPE: factual]
-[TYPE: how-to]
-[TYPE: descriptive]
-[TYPE: comparison]
-
-Use these definitions:
-- factual: a lookup with one right answer ("Who is...", "When is...", "What's the deadline...")
-- how-to: a process or procedure ("How do I...", "How can a student...")
-- descriptive: an open-ended description of a thing ("What does X lab do?", "Tell me about Y program")
-- comparison: enumerating, comparing, or surveying multiple items ("What scholarships exist?", "Who is researching Z?", "What are the options for...")
-
-When the question could fit two buckets, pick the more complex one.
-
-STEP 2 — WRITE THE ANSWER on a new line after the TYPE tag. Match length to the type:
-
-- factual → 1–2 sentences. Give the direct answer with its key supporting detail.
-- how-to → 3–5 sentences in prose, walking through the procedure in order.
-- descriptive → at least one full paragraph of 4–7 sentences. Synthesize information from at least 2 sources. Cover what the thing is, what it does, who runs it, and any notable specifics available in the sources.
-- comparison → at least 2 short paragraphs, OR a bulleted list with at least 4 items when enumerating discrete things (labs, scholarships, contacts, programs). Cover multiple angles. Cite many sources.
-
-USE LISTS ONLY when enumerating multiple discrete items. Otherwise write prose.
+ANSWER FORMAT:
+- Write 2–4 short paragraphs. Each paragraph covers one distinct aspect of the answer.
+- Synthesize information across at least 3 different sources whenever the sources support it.
+- Cover what, who, how, and any specifics (names, contacts, dates, processes, links) the sources provide.
+- Use a bulleted list ONLY when enumerating discrete items (e.g., listing multiple labs, scholarships, contacts, programs). Otherwise write prose.
 
 CITATIONS:
 - Cite every factual claim inline using [n] matching the source number, e.g. "Dr. Smith leads the yarn lab [2]."
@@ -257,11 +240,11 @@ CITATIONS:
 - Only cite sources you actually used.
 
 CONTENT:
-- Use ONLY information from the sources. If they don't contain the answer, say so in one sentence.
+- Use ONLY information from the sources. If they don't contain the answer, say so clearly.
 - No preamble. Start the answer with the substance, not "Based on the sources..." or restating the question.
 - Do not invent URLs, names, dates, or numbers.
 
-FORMAT REMINDER: Line 1 is the [TYPE: ...] tag. Line 2 onward is the answer.
+ANSWER:
 """
         return prompt
 
