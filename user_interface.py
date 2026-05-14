@@ -786,20 +786,28 @@ if ((search_button and bool(query)) or run_from_example) and actual_query:
             mock_answer = researcher.answer_provider.generate_response(prompt)
             stream_gen = (w + ' ' for w in mock_answer.split())
 
-        # Wrap stream to silently strip the leading [TYPE: xxx] CoT tag
+        # Wrap stream to silently strip any leading [TYPE: xxx] tag (legacy safety net)
         stream_gen = buffered_stream(stream_gen)
 
-        # Stream cleaned answer (no [TYPE: ...] visible, [n] markers still show live)
-        raw_answer = st.write_stream(stream_gen)
+        # ── Single-placeholder pattern: stream into placeholder, then REPLACE
+        # the streamed text with the citation-chip HTML version.
+        # Using one placeholder ensures the streamed plain text is overwritten,
+        # not appended — fixes the double-display bug.
+        answer_placeholder = st.empty()
+        with answer_placeholder.container():
+            raw_answer = st.write_stream(stream_gen)
         answer_rendered_this_run = True
 
-        # Safety net: in case anything slipped past the buffer
+        # Safety net for any leftover tag
         raw_answer = strip_type_tag(raw_answer)
 
-        # Then re-render with citation chips (replaces the streamed plain version)
+        # Replace the streamed text with the chip-rendered HTML version
         sources_for_cites = results.get('sources', [])
         rendered = render_answer_with_citations(raw_answer, sources_for_cites)
-        st.markdown(f'<div class="answer-body">{rendered}</div>', unsafe_allow_html=True)
+        answer_placeholder.markdown(
+            f'<div class="answer-body">{rendered}</div>',
+            unsafe_allow_html=True,
+        )
 
         with progress_container:
             progress_bar.progress(100)

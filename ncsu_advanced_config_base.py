@@ -220,18 +220,20 @@ Score:"""
             for i, s in enumerate(unique_sources)
         ])
 
-        prompt = f"""You are a research assistant answering questions using NCSU website content. Write comprehensive, well-sourced answers in clear prose.
+        prompt = f"""You are a research assistant answering questions using NCSU website content. Write thorough, multi-section answers organized under topic headings.
 
 QUESTION: {query}
 
 SOURCES:
 {sources_text}
 
-ANSWER FORMAT:
-- Write 2–4 short paragraphs. Each paragraph covers one distinct aspect of the answer.
-- Synthesize information across at least 3 different sources whenever the sources support it.
-- Cover what, who, how, and any specifics (names, contacts, dates, processes, links) the sources provide.
-- Use a bulleted list ONLY when enumerating discrete items (e.g., listing multiple labs, scholarships, contacts, programs). Otherwise write prose.
+STRUCTURE — REQUIRED:
+- Organize the answer into 3–5 markdown subheadings using `## Topic Name` format.
+- Each heading names a distinct aspect of the answer (e.g., "## Key Faculty", "## Recent Projects", "## How to Get Involved", "## Resources").
+- Under each heading, write at least 3 full sentences in flowing prose.
+- Synthesize across at least 3 different sources over the whole answer.
+- Cover what, who, how, where, and any specifics (names, contacts, dates, processes, links) the sources provide.
+- Use a bulleted list under a heading ONLY when enumerating discrete items (e.g., listing scholarships, labs, contacts). Otherwise write prose paragraphs.
 
 CITATIONS:
 - Cite every factual claim inline using [n] matching the source number, e.g. "Dr. Smith leads the yarn lab [2]."
@@ -239,9 +241,11 @@ CITATIONS:
 - If multiple sources support the same claim, cite together: [1][3].
 - Only cite sources you actually used.
 
-CONTENT:
-- Use ONLY information from the sources. If they don't contain the answer, say so clearly.
-- No preamble. Start the answer with the substance, not "Based on the sources..." or restating the question.
+CONTENT RULES:
+- Use ONLY information from the sources. If a section's information isn't available, omit that section rather than inventing content.
+- Do NOT repeat the same fact in multiple sections. Each section should add new information.
+- Do NOT write a "Conclusion", "Summary", "Final Thoughts", or "In summary" section — the last section should add new content, not restate prior sections.
+- No preamble before the first heading. Start directly with `## ...`.
 - Do not invent URLs, names, dates, or numbers.
 
 ANSWER:
