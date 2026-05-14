@@ -58,6 +58,46 @@ def favicon_url(url: str) -> str:
     return f"https://www.google.com/s2/favicons?domain={d}&sz=32"
 
 
+# Matches [TYPE: factual], [TYPE: how-to], [TYPE: descriptive], [TYPE: comparison]
+# Tolerates surrounding whitespace and trailing newline
+_TYPE_TAG_RE = re.compile(
+    r'^\s*\[TYPE:\s*(factual|how-to|descriptive|comparison)\s*\]\s*\n?',
+    re.IGNORECASE,
+)
+
+
+def strip_type_tag(text: str) -> str:
+    """Remove the leading [TYPE: xxx] line that the model emits for CoT classification."""
+    return _TYPE_TAG_RE.sub('', text, count=1).lstrip()
+
+
+def buffered_stream(stream_gen, buffer_chars: int = 40):
+    """
+    Wrap a token generator so the leading [TYPE: xxx] tag is silently consumed
+    before any text reaches the UI.
+
+    Accumulates the first `buffer_chars` characters, strips the tag, then
+    yields the remainder and continues streaming normally.
+    """
+    buffer = ""
+    flushed = False
+    for chunk in stream_gen:
+        if not flushed:
+            buffer += chunk
+            # Wait until we have enough chars to confidently detect/strip the tag,
+            # OR until we see a newline (tag is always one line).
+            if len(buffer) >= buffer_chars or '\n' in buffer:
+                cleaned = strip_type_tag(buffer)
+                flushed = True
+                if cleaned:
+                    yield cleaned
+        else:
+            yield chunk
+    # Edge case: stream ended before buffer filled
+    if not flushed and buffer:
+        yield strip_type_tag(buffer)
+
+
 def render_answer_with_citations(answer_text: str, sources: list) -> str:
     """
     Replace [n] markers in the LLM's answer with clickable domain chips.
@@ -746,15 +786,19 @@ if ((search_button and bool(query)) or run_from_example) and actual_query:
             mock_answer = researcher.answer_provider.generate_response(prompt)
             stream_gen = (w + ' ' for w in mock_answer.split())
 
-        # Stream raw answer first (will show [1][2] markers live)
+        # Wrap stream to silently strip the leading [TYPE: xxx] CoT tag
+        stream_gen = buffered_stream(stream_gen)
+
+        # Stream cleaned answer (no [TYPE: ...] visible, [n] markers still show live)
         raw_answer = st.write_stream(stream_gen)
         answer_rendered_this_run = True
 
+        # Safety net: in case anything slipped past the buffer
+        raw_answer = strip_type_tag(raw_answer)
+
         # Then re-render with citation chips (replaces the streamed plain version)
-        # Use a placeholder above and below to keep flow tight
         sources_for_cites = results.get('sources', [])
         rendered = render_answer_with_citations(raw_answer, sources_for_cites)
-        # Replace the streamed text with HTML version
         st.markdown(f'<div class="answer-body">{rendered}</div>', unsafe_allow_html=True)
 
         with progress_container:
@@ -795,8 +839,9 @@ if st.session_state.results and not st.session_state.running:
     # Re-render answer with chips on reruns
     if st.session_state.final_answer and not search_button and not answer_rendered_this_run:
         st.markdown("## Answer")
+        clean_answer = strip_type_tag(st.session_state.final_answer)
         rendered = render_answer_with_citations(
-            st.session_state.final_answer,
+            clean_answer,
             results.get('sources', []),
         )
         st.markdown(f'<div class="answer-body">{rendered}</div>', unsafe_allow_html=True)

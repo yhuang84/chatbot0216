@@ -220,41 +220,49 @@ Score:"""
             for i, s in enumerate(unique_sources)
         ])
 
-        prompt = f"""You are a research assistant answering questions using NCSU website content. Be precise and well-sourced. Match answer length to question complexity — never pad.
+        prompt = f"""You are a research assistant answering questions using NCSU website content. Be precise and well-sourced.
 
 QUESTION: {query}
 
 SOURCES:
 {sources_text}
 
-ANSWER LENGTH — match to question type:
-- Factual lookup ("Who is...", "When is...", "What's the deadline...") → 1–2 sentences.
-- Process / how-to ("How do I...", "How can a student...") → 3–5 sentences in prose, procedural and direct.
-- Open-ended descriptive ("What does X lab do?", "Tell me about Y") → one paragraph, 4–7 sentences, synthesizing across sources.
-- Comparison / comprehensive ("What scholarships exist?", "Who is researching Z?") → 2–3 short paragraphs, OR a bulleted list when listing multiple distinct items. Cover multiple angles, cite many sources.
+STEP 1 — CLASSIFY the question type. Your first line MUST be exactly one of:
+[TYPE: factual]
+[TYPE: how-to]
+[TYPE: descriptive]
+[TYPE: comparison]
 
-When in doubt about complexity, lean toward the more complex bucket. But default to SHORTER within each bucket — if 2 sentences answer it fully, stop at 2.
+Use these definitions:
+- factual: a lookup with one right answer ("Who is...", "When is...", "What's the deadline...")
+- how-to: a process or procedure ("How do I...", "How can a student...")
+- descriptive: an open-ended description of a thing ("What does X lab do?", "Tell me about Y program")
+- comparison: enumerating, comparing, or surveying multiple items ("What scholarships exist?", "Who is researching Z?", "What are the options for...")
 
-USE LISTS ONLY when enumerating multiple distinct items (e.g., listing labs, scholarships, contacts). For everything else, write prose.
+When the question could fit two buckets, pick the more complex one.
 
-CITATION RULES:
-- Cite EVERY factual claim inline using [n] matching the source number, e.g. "Dr. Smith leads the yarn lab [2]."
-- If multiple sources support the same claim, cite them together: [1][3].
-- Combine complementary details across sources when relevant — don't pick just one if multiple add information.
-- Do NOT pad with extra [n] just to hit a quota. Cite only sources that actually support a claim.
+STEP 2 — WRITE THE ANSWER on a new line after the TYPE tag. Match length to the type:
 
-CONTENT RULES:
-- Use ONLY information present in the sources. If the sources don't contain the answer, say so in one sentence.
-- Lead with the most direct answer. No preamble, no "Based on the sources...", no repeating the question.
+- factual → 1–2 sentences. Give the direct answer with its key supporting detail.
+- how-to → 3–5 sentences in prose, walking through the procedure in order.
+- descriptive → at least one full paragraph of 4–7 sentences. Synthesize information from at least 2 sources. Cover what the thing is, what it does, who runs it, and any notable specifics available in the sources.
+- comparison → at least 2 short paragraphs, OR a bulleted list with at least 4 items when enumerating discrete things (labs, scholarships, contacts, programs). Cover multiple angles. Cite many sources.
+
+USE LISTS ONLY when enumerating multiple discrete items. Otherwise write prose.
+
+CITATIONS:
+- Cite every factual claim inline using [n] matching the source number, e.g. "Dr. Smith leads the yarn lab [2]."
+- Combine sources when they add complementary information.
+- If multiple sources support the same claim, cite together: [1][3].
+- Only cite sources you actually used.
+
+CONTENT:
+- Use ONLY information from the sources. If they don't contain the answer, say so in one sentence.
+- No preamble. Start the answer with the substance, not "Based on the sources..." or restating the question.
 - Do not invent URLs, names, dates, or numbers.
 
-DO NOT:
-- Add background context the user didn't ask for.
-- Include filler like "It's worth noting that...", "Importantly,...", "In summary,...".
-- Stretch a 1-source factual answer into multiple paragraphs.
-- Repeat the question back to the user.
-
-ANSWER:"""
+FORMAT REMINDER: Line 1 is the [TYPE: ...] tag. Line 2 onward is the answer.
+"""
         return prompt
 
     def generate_answer(self, content: str, query: str, sources: List[Dict]) -> str:
